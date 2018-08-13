@@ -212,7 +212,7 @@ end
 
 local function oaOORHandler(prefix, text, dist, groupMember)
 	if groupMember ~= playerName then
-		local oorQuestID, oorObjCurrent, oorObjTotal, oorObjText, oorBoardIndex, isTask, _, = strsplit("\a", text, 7)
+		local oorQuestID, oorObjCurrent, oorObjTotal, oorObjText, oorBoardIndex, isTask, _ = strsplit("\a", text, 7)
 		oorQuestID = tonumber(oorQuestID)
 		oorObjCurrent =  tonumber(oorObjCurrent)
 		oorBoardIndex = tonumber(oorBoardIndex)
@@ -255,7 +255,7 @@ local function oaOORHandler(prefix, text, dist, groupMember)
 					oorGroupStorage[groupMember][oorQuestID][oorBoardIndex] = {savedDelta = oorObjCurrent - myObjCurrent}
 				end
 				local currentDelta = oorObjCurrent - myObjCurrent		
-				if (currentDelta > oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta) then	-- If current delta increased over previous delta, we missed an objective. If delta decreased, do nothing. Using tonumber() because of a strange "comparing number to string" error that sometimes happens.
+				if (currentDelta > oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta) then	-- If current delta increased over previous delta, we missed an objective. If delta decreased, do nothing.
 					local qlink = GetQuestLink(myLogIndex) or self.db.char.taskStorage[questID].taskQuestLink
 					local announcement = groupMember.."'s Objective Credit Not Received: \""..myObjText.."\" -- "..qlink
 					oaMessageHandler(announcement, true, false, false, false, true)					
