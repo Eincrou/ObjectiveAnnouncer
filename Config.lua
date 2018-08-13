@@ -293,14 +293,23 @@ local myOptions = {
 					order = 5,
 					args={
 						oordesc = {
-							order = 1,
+							order = 10,
 							type = "description",
 							name = L["qsedesc"],
 						},			
+						taskArea = {
+							name = L["qsebonusobj"],
+							desc = L["qsebonusobjdesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.questTask = val end,
+							get = function(info) return ObjAnn.db.profile.questTask end,
+							order = 11,
+							width = "double",
+						},
 						header1 = {
 							name = L["headerstart"],
 							type = "header",
-							order = 2,
+							order = 20,
 							width = "double"
 						},						
 						accept = {
@@ -311,14 +320,6 @@ local myOptions = {
 							get = function(info) return ObjAnn.db.profile.questAccept end,
 							order = 30,
 							width = "normal",
-						},
-						taskArea = {
-							name = L["qsebonusobj"],
-							desc = L["qsebonusobjdesc"],
-							type = "toggle",
-							set = function(info,val) ObjAnn.db.profile.questTask = val end,
-							get = function(info) return ObjAnn.db.profile.questTask end,
-							order = 40,								
 						},
 						escort = {
 							name = L["qseescort"],
@@ -343,13 +344,29 @@ local myOptions = {
 							get = function(info) return ObjAnn.db.profile.questTurnin end,
 							order = 70,
 						},
+						qabandon = {
+							name = L["qseabandon"],
+							desc = L["qseabandondesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.questAbandon = val end,
+							get = function(info) return ObjAnn.db.profile.questAbandon end,
+							order = 80,
+						},	
+						qfailed = {
+							name = L["qsefail"],
+							desc = L["qsefaildesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.questFail = val end,
+							get = function(info) return ObjAnn.db.profile.questFail end,
+							order = 90,
+						},	
 						questXP = {
 							name = L["qseexp"],
 							desc = L["qseexpdesc"],
 							type = "toggle",
 							set = function(info,val) ObjAnn.db.profile.questXP = val end,
 							get = function(info) return ObjAnn.db.profile.questXP end,
-							order = 80,
+							order = 100,
 						},		
 						questRewards = {
 							name = L["qserewards"],
@@ -357,23 +374,16 @@ local myOptions = {
 							type = "toggle",
 							set = function(info,val) ObjAnn.db.profile.questRewards = val end,
 							get = function(info) return ObjAnn.db.profile.questRewards end,
-							order = 90,
+							order = 110,
 						},							
-						qfailed = {
-							name = L["qsefail"],
-							desc = L["qsefaildesc"],
-							type = "toggle",
-							set = function(info,val) ObjAnn.db.profile.questFail = val end,
-							get = function(info) return ObjAnn.db.profile.questFail end,
-							order = 100,
-						},										
+									
 						qautocomp = {
 							name = L["qseautocomplete"],
 							desc = L["qseautocompletedesc"],
 							type = "toggle",
 							set = function(info,val) ObjAnn.db.profile.infoAutoComp = val end,
 							get = function(info) return ObjAnn.db.profile.infoAutoComp end,
-							order = 110,								
+							order = 120,								
 						},
 					},
 				},					
