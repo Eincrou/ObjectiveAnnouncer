@@ -316,13 +316,21 @@ local myOptions = {
 							get = function(info) return ObjAnn.db.profile.questTurnin end,
 							order = 3,
 						},
+						questXP = {
+							name = "Experience Gained",
+							desc = "Make an announcement of how much experience you received after turning in a quest.",
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.questXP = val end,
+							get = function(info) return ObjAnn.db.profile.questXP end,
+							order = 4,
+						},						
 						qfailed = {
 							name = "Fail a Quest",
 							desc = "Make an announcement when you fail a quest.",
 							type = "toggle",
 							set = function(info,val) ObjAnn.db.profile.questFail = val end,
 							get = function(info) return ObjAnn.db.profile.questFail end,
-							order = 4,
+							order = 5,
 						},										
 						escort = {
 							name = "Auto-accept escort/event quests",
@@ -330,7 +338,7 @@ local myOptions = {
 							type = "toggle",
 							set = function(info,val) ObjAnn.db.profile.questEscort = val end,
 							get = function(info) return ObjAnn.db.profile.questEscort end,
-							order = 5,
+							order = 6,
 							width = "double",
 						},
 						qautocomp = {
@@ -339,7 +347,7 @@ local myOptions = {
 							type = "toggle",
 							set = function(info,val) ObjAnn.db.profile.infoAutoComp = val end,
 							get = function(info) return ObjAnn.db.profile.infoAutoComp end,
-							order = 6,								
+							order = 7,								
 						},
 						taskArea = {
 							name = "Bonus Objective",
@@ -347,7 +355,7 @@ local myOptions = {
 							type = "toggle",
 							set = function(info,val) ObjAnn.db.profile.questTask = val end,
 							get = function(info) return ObjAnn.db.profile.questTask end,
-							order = 7,								
+							order = 8,								
 						},
 					},
 				},					
@@ -595,15 +603,22 @@ local slashCommands = {
 	end,		
 	["turnin"] = function()
 		if ObjAnn.db.profile.questTurnin then
-			ObjAnn.db.profile.questTurnin = false
-			ObjAnnouncer:UnregisterEvent("QUEST_COMPLETE", oaQuestTurnin)
+			ObjAnn.db.profile.questTurnin = false			
 			ObjAnnouncer:Print("Announce Quest Turn-in |cFFFF0000Disabled|r")
 		else
-			ObjAnn.db.profile.questTurnin = true
-			ObjAnnouncer:RegisterEvent("QUEST_COMPLETE", oaQuestTurnin)
+			ObjAnn.db.profile.questTurnin = true			
 			ObjAnnouncer:Print("Announce Quest Turn-in |cFF00FF00Enabled|r")
 		end
 	end,
+	["xp"] = function()
+		if ObjAnn.db.profile.questXP then
+			ObjAnn.db.profile.questXP = false			
+			ObjAnnouncer:Print("Announce Quest Experience |cFFFF0000Disabled|r")
+		else
+			ObjAnn.db.profile.questXP = true			
+			ObjAnnouncer:Print("Announce Quest Experience |cFF00FF00Enabled|r")
+		end
+	end,	
 	["escort"] = function()
 		if ObjAnn.db.profile.questEscort then
 			ObjAnn.db.profile.questEscort = false

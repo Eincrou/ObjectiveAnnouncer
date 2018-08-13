@@ -1,13 +1,13 @@
 local NAME, S = ...
 S.VERSION = GetAddOnMetadata(NAME, "Version")
-S.NUMVERSION = 6033	-- 6.0.3c
+S.NUMVERSION = 6034	-- 6.0.3c
 S.NAME = "Objective Announcer v"..S.VERSION
 ObjAnnouncer = LibStub("AceAddon-3.0"):NewAddon("Objective Announcer", "AceComm-3.0", "AceEvent-3.0", "AceConsole-3.0", "LibSink-2.0")
 	
 	---------------------
 	-- Local Variables --
 	---------------------
-local oorUpdated = false
+local oorUpdated = true
 	
 local self = ObjAnnouncer
 local pairs = pairs
@@ -21,6 +21,7 @@ local objDescSaved = {}
 local oorGroupStorage = {}
 local qidComplete = 0
 local turnLink = nil
+local questExpReceived = nil
 local pbThresholds = {}
 
 local defaults = {
@@ -44,7 +45,7 @@ local defaults = {
 			-- Additional Info --
 		questlink = true, infoSuggGroup = false, infoLevel = false, infoFrequency = false, infoTag = false,
 			--Quest Start/End --
-		questAccept = false, questTurnin = false, questEscort = false, infoAutoComp = false, questFail = false,	questTask = false,
+		questAccept = false, questTurnin = false, questEscort = false, infoAutoComp = false, questFail = false,	questTask = false, questXP = false,
 			-- Sound --
 		enableCompletionSound = true, enableCommSound = false, enableAcceptFailSound = false,
 		annSoundName = "PVPFlagCapturedHorde", annSoundFile = "Sound\\Interface\\PVPFlagCapturedHordeMono.wav",
@@ -212,7 +213,7 @@ end
 
 local function oaOORHandler(prefix, text, dist, groupMember)
 	if groupMember ~= playerName then
-		local oorQuestID, oorObjCurrent, oorObjTotal, oorObjText, oorBoardIndex, isTask, _ = strsplit("\a", text, 7)
+		local oorQuestID, oorBoardIndex, oorObjCurrent, oorObjTotal, oorObjText, isTask, _ = strsplit("\a", text, 7)
 		oorQuestID = tonumber(oorQuestID)
 		oorObjCurrent =  tonumber(oorObjCurrent)
 		oorBoardIndex = tonumber(oorBoardIndex)
@@ -293,7 +294,7 @@ local function oaOORSendComm(questLogIndex, questID, boardIndex, objDesc, isTask
 	else
 		objCurrent, objTotal, objText = string.match(objDesc, "(%d+)/(%d+) ?(.*)")
 	end
-	oorCommMessage = strjoin("\a", questID, objCurrent, objTotal, objText, boardIndex, tostring(isTask), reserved)								
+	oorCommMessage = strjoin("\a", questID, boardIndex, objCurrent, objTotal, objText, tostring(isTask), reserved)								
 	ObjAnnouncer:SendCommMessage("ObjA OOR", oorCommMessage, chanType)	
 end
 
@@ -310,10 +311,9 @@ local function oaQuestAccepted(event, ...)
 end
 
 local function oaQuestTurnin(event, ...)
-	if self.db.profile.questTurnin then
-		qidComplete = GetQuestID()
-		turnLink = GetQuestLink(GetQuestLogIndexByID(qidComplete))
-	end
+	qidComplete = GetQuestID()
+	turnLink = GetQuestLink(GetQuestLogIndexByID(qidComplete))
+	questExpReceived = GetRewardXP()
 end
 
 local function oaAutoComplete(event, ...)
@@ -387,9 +387,15 @@ function ObjAnnouncer:OnEnable()
 			--[[ Announce Quest Turn-in ]]--
 			if self.db.profile.questTurnin and turnLink ~= nil then
 				local Message = "Quest Turned In -- "..turnLink
-				oaMessageHandler(Message, true)
-				turnLink = nil
+				oaMessageHandler(Message, true)				
 			end
+			--[[ Announce Quest Experience Gained]]--
+			if self.db.profile.questXP and questExpReceived ~= nil and turnLink ~= nil then
+				local message = questExpReceived.." Experience Gained -- "..turnLink
+				oaMessageHandler(message, true)				
+			end
+			questExpReceived = nil
+			turnLink = nil
 		end
 		local numEntries, numQuests = GetNumQuestLogEntries()
 		if numEntries ~= EntriesSaved or numQuests ~= QuestsSaved then
@@ -478,7 +484,7 @@ function ObjAnnouncer:OnEnable()
 							if percent ~= objDescSaved[questIndex][boardIndex] then
 								if percent > 0 then
 									objDescSaved[questIndex][boardIndex] = percent	
-									if (progressAnnCheck(percent, questID) and (self.db.profile.annType == 3) or (self.db.profile.annType == 4) or (self.db.profile.annType == 5)) then	-- Run pAC() first to ensure that pbThresholds[qID] stays up to date.
+									if ((progressAnnCheck(percent, questID) or objComplete) and (self.db.profile.annType == 3) or (self.db.profile.annType == 4) or (self.db.profile.annType == 5)) then	-- Run pAC() first to ensure that pbThresholds[qID] stays up to date.
 										local percObjDesc = objDesc..": "..floor(percent).."%"
 										oaMessageCreator(questIndex, questID, percObjDesc, objComplete, level, suggestedGroup, isComplete, frequency)
 									end
