@@ -1,0 +1,8 @@
+## Interface: 50100
+## Title: Objective Announcer
+## Version: 5.1.0
+## Notes: Announces Completed Quest Objectives to Chat
+## Author: Bantou
+## SavedVariables: ObjectiveAnnouncerDB
+
+ObjectiveAnnouncer.xml
