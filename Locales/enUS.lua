@@ -71,6 +71,8 @@ L["qseturnin"] = "Turn in a Quest"
 L["qseturnindesc"] = "Make an announcement when you turn in a quest."
 L["qseexp"] = "Experience Gained"
 L["qseexpdesc"] = "Make an announcement of how much experience you received after turning in a quest."
+L["qserewards"] = "Reward Chosen"
+L["qserewardsdesc"] = "Make an announcement of the quest reward you received."
 L["qsefail"] = "Fail a Quest"
 L["qsefaildesc"] = "Make an announcement when you fail a quest."
 L["qseescort"] = "Auto-accept escort/event quests"
@@ -99,7 +101,7 @@ L["soundcommunicationdesc"] = "Sets whether to play a sound when other players w
 L["soundcommfile"] = "OA Communication"
 L["soundcommfiledesc"] = "Select a sound to play when another player announces an objective"
 
-	-- Self Outputs --
+	-- Self Outputs (LibSink) --
 L["selfoutput"] = "Self Outputs"
 L["selfoutputdesc"] = "Select where to send your Objective Announcer messages."
 
@@ -118,6 +120,7 @@ L["slashpublicerror"] = "Valid public chat names are: say, party, instance, raid
 L["slashquestaccept"] = "Announce Accepted Quests"
 L["slashquestturnin"] = "Announce Turned-in Quests"
 L["slashquestexp"] = "Announce Experience Gained"
+L["slashquestrewards"] = "Announce Quest Rewards"
 L["slashquestescort"] = "Auto-accept Escort Quests"
 L["slashquestfail"] = "Announce Failed Quests"
 		-- Sounds --
@@ -137,6 +140,7 @@ L["autoaccept1"] = "Automatically accepted"
 L["autoaccept2"] = "Started by"
 L["autocompletealert"] = "AUTO-COMPLETE ALERT"
 L["expgain"] = "Experience Gained"
+L["rewardchosen"] = "Reward Received From"
 L["oornotreceived"] = "'s Objective Credit Not Received: \""	-- Be sure to keep the ( \" ) at the end of the string.
 L["questaccepted"] = "Quest Accepted"
 L["questfailed"] = "QUEST FAILED"
@@ -148,8 +152,8 @@ L["questturnin"] = "Quest Turned In"
 	-- Strings --
 	-------------
 	
-L["slain"] = true
-L["killed"] = true
+L["slain"] = true	-- The exact word used for quests to kill mobs.
+L["killed"] = true	-- The exact word used for quests to kill mobs.
 
 
 	------------

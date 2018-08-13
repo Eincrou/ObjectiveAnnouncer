@@ -350,14 +350,22 @@ local myOptions = {
 							set = function(info,val) ObjAnn.db.profile.questXP = val end,
 							get = function(info) return ObjAnn.db.profile.questXP end,
 							order = 80,
-						},						
+						},		
+						questRewards = {
+							name = L["qserewards"],
+							desc = L["qserewardsdesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.questRewards = val end,
+							get = function(info) return ObjAnn.db.profile.questRewards end,
+							order = 90,
+						},							
 						qfailed = {
 							name = L["qsefail"],
 							desc = L["qsefaildesc"],
 							type = "toggle",
 							set = function(info,val) ObjAnn.db.profile.questFail = val end,
 							get = function(info) return ObjAnn.db.profile.questFail end,
-							order = 90,
+							order = 100,
 						},										
 						qautocomp = {
 							name = L["qseautocomplete"],
@@ -365,7 +373,7 @@ local myOptions = {
 							type = "toggle",
 							set = function(info,val) ObjAnn.db.profile.infoAutoComp = val end,
 							get = function(info) return ObjAnn.db.profile.infoAutoComp end,
-							order = 100,								
+							order = 110,								
 						},
 					},
 				},					
@@ -650,6 +658,15 @@ local slashCommands = {
 			ObjAnnouncer:Print(L["slashquestexp"].." |cFF00FF00"..L["enabled"].."|r")
 		end
 	end,	
+	["reward"] = function()
+		if ObjAnn.db.profile.questRewards then
+			ObjAnn.db.profile.questRewards = false			
+			ObjAnnouncer:Print(L["slashquestrewards"].." |cFFFF0000"..DISABLED.."|r")
+		else
+			ObjAnn.db.profile.questRewards = true			
+			ObjAnnouncer:Print(L["slashquestrewards"].." |cFF00FF00"..L["enabled"].."|r")
+		end
+	end,		
 	["escort"] = function()
 		if ObjAnn.db.profile.questEscort then
 			ObjAnn.db.profile.questEscort = false

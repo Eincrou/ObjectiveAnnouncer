@@ -1,6 +1,6 @@
 local NAME, S = ...
 S.VERSION = GetAddOnMetadata(NAME, "Version")
-S.NUMVERSION = 6035	-- 6.0.3e
+S.NUMVERSION = 6036	-- 6.0.3f
 S.NAME = "Objective Announcer v"..S.VERSION
 
 ObjAnnouncer = LibStub("AceAddon-3.0"):NewAddon("Objective Announcer", "AceComm-3.0", "AceEvent-3.0", "AceConsole-3.0", "LibSink-2.0")
@@ -48,7 +48,7 @@ local defaults = {
 			-- Additional Info --
 		questlink = true, infoSuggGroup = false, infoLevel = false, infoFrequency = false, infoTag = false,
 			--Quest Start/End --
-		questAccept = false, questTurnin = false, questEscort = false, infoAutoComp = false, questFail = false,	questTask = false, questXP = false,
+		questAccept = false, questTurnin = false, questEscort = false, infoAutoComp = false, questFail = false,	questTask = false, questXP = false, questRewards = false,
 			-- Sound --
 		enableCompletionSound = true, enableCommSound = false, enableAcceptFailSound = false,
 		annSoundName = "PVPFlagCapturedHorde", annSoundFile = "Sound\\Interface\\PVPFlagCapturedHordeMono.wav",
@@ -319,6 +319,11 @@ local function oaQuestTurnin(event, ...)
 	qidComplete = GetQuestID()
 	turnLink = GetQuestLink(GetQuestLogIndexByID(qidComplete))
 	questExpReceived = GetRewardXP()
+	if self.db.questRewards then
+		for i = 1, GetNumQuestChoices() do
+			GetQuestChoiceRewardItem()
+		end
+	end
 end
 
 local function oaAutoComplete(event, ...)
@@ -379,6 +384,16 @@ function ObjAnnouncer:OnInitialize()
 end
 
 function ObjAnnouncer:OnEnable()
+	-- [[ Announce Quest Rewards ]]--
+	local origQuestRewardCompleteButton_OnClick = QuestFrameCompleteQuestButton:GetScript("OnClick")
+	QuestFrameCompleteQuestButton:SetScript("OnClick", function(...)
+		if self.db.profile.questRewards and QuestInfoFrame.itemChoice and QuestInfoFrame.itemChoice > 0 then
+			 local rewardMessage = L["rewardchosen"].." "..turnLink.." -- "..GetQuestItemLink("choice", QuestInfoFrame.itemChoice)
+			 oaMessageHandler(rewardMessage, true)
+		end
+		return origQuestRewardCompleteButton_OnClick(...)
+	end)
+	
 	function oaeventHandler(event, ...)
 		local logIndex = GetQuestLogIndexByID(qidComplete)
 		if  logIndex == 0 then -- Checks to see if the quest that fired the QUEST_COMPLETE event is no longer in the quest log.
@@ -493,6 +508,7 @@ function ObjAnnouncer:OnEnable()
 									objDescSaved[questIndex][boardIndex] = percent	
 									if (progressAnnCheck(percent, questID) and self.db.profile.annType == 3) or (self.db.profile.annType == 4) or (self.db.profile.annType == 5) then	-- Run pAC() first to ensure that pbThresholds[qID] stays up to date.
 										local percObjDesc = objDesc..": "..floor(percent).."%"
+										if (isComplete == 1) then objComplete = true end
 										oaMessageCreator(questIndex, questID, percObjDesc, objComplete, level, suggestedGroup, isComplete, frequency)
 									end
 								--[[  Send progress to other OA users for OOR Alerts. ]]--	
