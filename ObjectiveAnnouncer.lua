@@ -21,9 +21,9 @@ defaults = {
 			-- Stuff --
 		questlink = true,
 		addinfo = false,
-		questonly = false,
-		progress = false,
-		questlink = true,
+--		questonly = false,
+--		progress = false,
+		annType = 2,
 			--Quest Givers --
 		questAccept = false,
 		questTurnin = false,
@@ -46,6 +46,11 @@ function ObjAnnouncer:OnInitialize()
 	questCSaved = {}
 	objDescSaved = {}
 
+	qidComplete = 0
+	turnLink = nil
+
+
+
 	self.db = LibStub("AceDB-3.0"):New("ObjectiveAnnouncerDB", defaults, true)
 	for boardSaved = 1, 100 do
 		objCSaved[boardSaved] = {}
@@ -53,7 +58,7 @@ function ObjAnnouncer:OnInitialize()
 	end
 	
 	myOptions = {
-		name = "Objective Announcer".." "..version.." |cFF7431CAby bantou|r |cFF339900(Eincrou's Update)",
+		name = "Objective Announcer".." "..version.." |cFFFF7F00by Bantou|r |cFF339900and Eincrou",
 		type = "group",
 		childGroups = "tab",
 		args = {
@@ -62,24 +67,22 @@ function ObjAnnouncer:OnInitialize()
 				type="group",
 				order = 1,
 				args={
-					limited = {
-						name = "Completed Quests Only",
-						desc = "Sets whether to announce only when quests are fully completed, rather than upon completion of each objective.|n|cFFF02121(Disables 'Announce Objectives Progress')",
-						type = "toggle",
-						set = function(info,val) self.db.profile.questonly = val end,
-						get = function(info) return self.db.profile.questonly end,
-						order = 0,
+					announce = {
+						name = "|TInterface\\Icons\\Ability_Warrior_RallyingCry:18|t Announcement Type:",
+						desc = "Select which type of announcements are made.",
+						type = "select",
+						style = "radio",
+						values = {
+							"Completed Quests",
+							"Completed Objectives",
+							"Both Quests & Objectives",
+							"Objective Progress",
+							"Progress & Comp. Quests"
+							},
+						set = function(info,val) self.db.profile.annType = val end,
+						get = function(info) return self.db.profile.annType end,
+						order = 0
 					},
-					progress = {
-						name = "Announce Objectives Progress",
-						desc = "Sets whether to announce every time you advance an objective. |n|cFF9ffbff(Example: Bear Arses: 4/12)",
-						type = "toggle",
-						disabled = function() return self.db.profile.questonly end,						
-						set = function(info,val) self.db.profile.progress = val end,
-						get = function(info) return self.db.profile.progress end,
-						order = 1,
-						width = "double"
-					},				
 					announceChannels = {
 						inline = true,
 						name = "|TInterface\\Icons\\Warrior_disruptingshout:18|t Announce to:",
@@ -219,7 +222,7 @@ function ObjAnnouncer:OnInitialize()
 						args={
 							link = {
 								name = "Quest Link for Objectives",
-								desc = "Adds a clickable link of the relevant quest to your objective announcements.|n|cFF9ffbff(Completed quest announcements always contain a link)",
+								desc = "Adds a clickable link of the relevant quest to your announcements.",
 								type = "toggle",
 								set = function(info,val) self.db.profile.questlink = val end,
 								get = function(info) return self.db.profile.questlink end,
@@ -246,10 +249,7 @@ function ObjAnnouncer:OnInitialize()
 								name = "Accept a Quest",
 								desc = "Make an announcement when you accept a new quest.",
 								type = "toggle",
-								set = function(info,val) self.db.profile.questAccept = val
-									if val then ObjAnnouncer:RegisterEvent("QUEST_ACCEPTED", oaQuestAccepted)
-									else ObjAnnouncer:UnregisterEvent("QUEST_ACCEPTED", oaQuestAccepted) end
-								end,
+								set = function(info,val) self.db.profile.questAccept = val end,
 								get = function(info) return self.db.profile.questAccept end,
 								order = 1,
 								width = "normal",
@@ -269,10 +269,7 @@ function ObjAnnouncer:OnInitialize()
 								name = "Auto-accept escort/event quests",
 								desc = "Automatically accepts event quests started by party members.",
 								type = "toggle",
-								set = function(info,val) self.db.profile.questEscort = val
-									if val then ObjAnnouncer:RegisterEvent("QUEST_ACCEPT_CONFIRM",oaAcceptEscort)
-									else ObjAnnouncer:UnregisterEvent("QUEST_ACCEPT_CONFIRM",oaAcceptEscort) end
-								end,
+								set = function(info,val) self.db.profile.questEscort = val end,
 								get = function(info) return self.db.profile.questEscort end,
 								order = 3,
 								width = "double",
@@ -367,7 +364,13 @@ end
 
 function ObjAnnouncer:OnEnable()
 
-	function oaeventHandler(...)
+	function oaeventHandler(event, ...)
+		local logIndex = GetQuestLogIndexByID(qidComplete)
+		if  logIndex == 0 and turnLink ~= nil then -- Checks to see if the quest that fired the QUEST_COMPLETE event is no longer in the quest log.
+			local Message = "Quest Turned In -- "..turnLink
+			oaMessageHandler(Message, true)
+			turnLink = nil
+		end
 		local numEntries, numQuests = GetNumQuestLogEntries()
 		if numEntries ~= EntriesSaved or numQuests ~= QuestsSaved then
 			EntriesSaved, QuestsSaved = GetNumQuestLogEntries()
@@ -382,14 +385,16 @@ function ObjAnnouncer:OnEnable()
 					end
 				end
 			end
+			flagQuestTurnin = false
 		else
 			for questIndex = 1, numEntries do
 				local questTitle, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, questID = GetQuestLogTitle(questIndex)
 				if isHeader ~= 1 then
 			--[[ Announcements Logic ]]-- 
 				--[[ Completed Quests Only ]]--
-					if self.db.profile.questonly ==  true then
-						if (isComplete) and isComplete ~= questCSaved[questIndex] then
+					if (isComplete) and isComplete ~= questCSaved[questIndex] then
+						questCSaved[questIndex] = isComplete
+						if self.db.profile.annType ==  1 then
 							if self.db.profile.addinfo == true then
 								if (isDaily) then
 									InfoDaily = " Daily"
@@ -411,11 +416,13 @@ function ObjAnnouncer:OnEnable()
 							local compMessage = strjoin("", "QUEST COMPLETE -- ", questLink, MessageInfo)
 							oaMessageHandler(compMessage,true,true,true,true)
 						end
-				--[[ Completed Objectives ]]--
-					else
-						for boardIndex = 1, GetNumQuestLeaderBoards(questIndex) do
-							local objDesc, objType, objComplete = GetQuestLogLeaderBoard(boardIndex, questIndex)
-							if (objComplete) and objComplete ~= objCSaved[questIndex][boardIndex] then
+					end
+				--[[ Completed Objectives (and Completed Quests, if Announce Type 3 is selected) ]]--
+					for boardIndex = 1, GetNumQuestLeaderBoards(questIndex) do
+						local objDesc, objType, objComplete = GetQuestLogLeaderBoard(boardIndex, questIndex)
+						if (objComplete) and objComplete ~= objCSaved[questIndex][boardIndex] then
+							objCSaved[questIndex][boardIndex] = objComplete
+							if self.db.profile.annType == 2 or self.db.profile.annType == 3 then
 								if self.db.profile.questlink == true then
 									questLink = GetQuestLink(questIndex)
 									MessageLink = strjoin("", "  --  ", questLink)
@@ -439,15 +446,17 @@ function ObjAnnouncer:OnEnable()
 								else
 									MessageInfo = ""
 								end
-								if isComplete == 1 then	-- Different message if the quest is now complete.
-									local objMessage = strjoin("", objDesc, " -- ", questLink, " -- QUEST COMPLETE!")
-									oaMessageHandler(objMessage,true,true,true,true)
-								else
-									local objMessage = strjoin("", objDesc, MessageLink,  MessageInfo)
-									oaMessageHandler(objMessage,true,true,true,false)
+								local objMessage = strjoin("", objDesc, MessageLink,  MessageInfo)								
+								if self.db.profile.annType == 3 and isComplete == 1 then
+									objMessage = strjoin("", objMessage, " -- QUEST COMPLETE!")								
 								end
-						--[[ Announces the progress of objectives ]]--
-							elseif self.db.profile.progress == true and objDesc ~= objDescSaved[questIndex][boardIndex] and string.find(objDesc, ": 0/") == nil then
+								oaMessageHandler(objMessage,true,true,true,isComplete)
+							end
+						end
+					--[[ Announces the progress of objectives (and Completed Quests, if Announce Type 5 is selected)]]--
+						if objDesc ~= objDescSaved[questIndex][boardIndex] and string.find(objDesc, ": 0/") == nil then
+							objDescSaved[questIndex][boardIndex] = objDesc
+							if self.db.profile.annType == 4 or self.db.profile.annType == 5 then
 								if self.db.profile.questlink == true then
 									questLink = GetQuestLink(questIndex)
 									MessageLink = strjoin("", "  --  ", questLink)
@@ -472,21 +481,12 @@ function ObjAnnouncer:OnEnable()
 									MessageInfo = ""
 								end
 								local progMessage = strjoin("", objDesc, MessageLink, MessageInfo)
-								oaMessageHandler(progMessage,true,false,false,false)
+								if self.db.profile.annType == 5 and isComplete == 1 then			-- Appends QUEST COMPLETE! if announce type 5 is selected
+									progMessage = strjoin("", progMessage, " -- QUEST COMPLETE!")
+								end								
+								oaMessageHandler(progMessage,true,objComplete,objComplete,isComplete)
 							end
 						end
-					end
-				end
-			end
-			EntriesSaved, QuestsSaved = GetNumQuestLogEntries()
-			for questIndex = 1, EntriesSaved do
-				local questTitle, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, questID = GetQuestLogTitle(questIndex)
-				if isHeader ~= 1 then
-					questCSaved[questIndex] = isComplete
-					for boardIndex = 1, GetNumQuestLeaderBoards(questIndex) do
-						local objDesc, objType, objComplete = GetQuestLogLeaderBoard(boardIndex, questIndex)
-						objCSaved[questIndex][boardIndex] = objComplete
-						objDescSaved[questIndex][boardIndex] = objDesc
 					end
 				end
 			end
@@ -525,15 +525,15 @@ function ObjAnnouncer:OnEnable()
 			SendChatMessage(announcement, "CHANNEL", nil, self.db.profile.chanName)
 			selfTest = selfTest + 1
 		end
-		if enableSelf then
+	--	if enableSelf then	-- Every announcement message is currently enabled for self reporting, so this test is unnecessary.  It might be useful in the future though, so I'll just comment it out.
 			if self.db.profile.selftellalways then
-				local announcementSelf = string.gsub(announcement, "|r", "|r"..self.db.profile.selfColor.hex)
+				local announcementSelf = string.gsub(announcement, "|r", "|r"..self.db.profile.selfColor.hex)	-- If a yellow quest link is present in the message, this allows the user's self color to display for any text after the yellow quest link.
 				DEFAULT_CHAT_FRAME:AddMessage(self.db.profile.selfColor.hex..announcementSelf)
 			elseif self.db.profile.selftell and selfTest == 0 then
 				local announcementSelf = string.gsub(announcement, "|r", "|r"..self.db.profile.selfColor.hex)
 				DEFAULT_CHAT_FRAME:AddMessage(self.db.profile.selfColor.hex..announcementSelf)
 			end
-		end
+	--	end
 		if enableSound and self.db.profile.enableSound then
 			if isComplete then
 				PlaySoundFile(self.db.profile.compSoundFile,"Master")
@@ -555,40 +555,33 @@ function ObjAnnouncer:OnEnable()
 	end
 
 	function oaQuestAccepted(event, ...)
-		local questLogIndex = ...
-		local acceptedLink = GetQuestLink(questLogIndex)
-		local Message = "Quest Accepted -- "..acceptedLink
-		oaMessageHandler(Message)
+		if self.db.profile.questAccept then
+			local questLogIndex = ...
+			local acceptedLink = GetQuestLink(questLogIndex)
+			local Message = "Quest Accepted -- "..acceptedLink
+			oaMessageHandler(Message, true)
+		end
 	end
 
 	function oaQuestTurnin(event, ...)
-		if event == "QUEST_COMPLETE" then 
-			qidComplete = GetQuestID()
-			turnLink = GetQuestLink(GetQuestLogIndexByID(qidComplete))
-			ObjAnnouncer:RegisterEvent("QUEST_LOG_UPDATE", oaQuestTurnin)	-- Temporarily send QLU events here.
-		end
-		if event == "QUEST_LOG_UPDATE" then
-			local logIndex = GetQuestLogIndexByID(qidComplete)
-			if  logIndex == 0 and turnLink ~= nil then -- Checks to see if the quest that fired the QUEST_COMPLETE event is no longer in the quest log.
-				local Message = "Quest Turned In -- "..turnLink
-				oaMessageHandler(Message)
-			end
-		ObjAnnouncer:RegisterEvent("QUEST_LOG_UPDATE", oaeventHandler)	-- Send QLU events back to the main handler.
-		end
+		qidComplete = GetQuestID()
+		turnLink = GetQuestLink(GetQuestLogIndexByID(qidComplete))
 	end
 	
 	function oaAcceptEscort(event, ...)
-		local starter, questTitle = ...
-		ConfirmAcceptQuest()
-		StaticPopup_Hide("QUEST_ACCEPT")
-		local Message = "|cff33ff99Objective Announcer|r: Automatically accepted: |cffffef82"..questTitle.."|r -- Started by: "..starter
-		DEFAULT_CHAT_FRAME:AddMessage(Message)
+		if self.db.profile.questEscort then
+			local starter, questTitle = ...
+			ConfirmAcceptQuest()
+			StaticPopup_Hide("QUEST_ACCEPT")
+			local Message = "|cff33ff99Objective Announcer|r: Automatically accepted: |cffffef82"..questTitle.."|r -- Started by: "..starter
+			DEFAULT_CHAT_FRAME:AddMessage(Message)
+		end
 	end
 	
 	ObjAnnouncer:RegisterEvent("QUEST_LOG_UPDATE", oaeventHandler)
-	if self.db.profile.questAccept then ObjAnnouncer:RegisterEvent("QUEST_ACCEPTED", oaQuestAccepted) end
+	ObjAnnouncer:RegisterEvent("QUEST_ACCEPTED", oaQuestAccepted)
 	if self.db.profile.questTurnin then ObjAnnouncer:RegisterEvent("QUEST_COMPLETE", oaQuestTurnin)	end
-	if self.db.profile.questEscort then ObjAnnouncer:RegisterEvent("QUEST_ACCEPT_CONFIRM", oaAcceptEscort) end
+	ObjAnnouncer:RegisterEvent("QUEST_ACCEPT_CONFIRM", oaAcceptEscort)
 	ObjAnnouncer:RegisterChatCommand("oa", oacommandHandler)
 	ObjAnnouncer:RegisterChatCommand("obja", oacommandHandler)
 	ObjAnnouncer:RegisterComm("Obj Announcer", oareceivedComm)
