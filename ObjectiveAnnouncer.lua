@@ -1,15 +1,20 @@
 
 ObjAnnouncer = LibStub("AceAddon-3.0"):NewAddon("Objective Announcer", "AceComm-3.0", "AceEvent-3.0", "AceConsole-3.0","LibSink-2.0")
+local self = ObjAnnouncer
 local LSM = LibStub("LibSharedMedia-3.0")
 local version = GetAddOnMetadata("ObjectiveAnnouncer","Version") or ""
+
+local oorGroupStorage = {}
+local oorCompletedQIDs = {}
+local qidComplete = 0
+local turnLink = nil
 
 defaults = {
 	profile = {
 		--[[ General ]]--
 		annType = 2,
 			-- Announce to --
-		selftell = true,
-		selftellalways = false,
+		selftell = true, selftellalways = false,
 		selfColor = {r = 1.0, g = 1.0, b = 1.0, hex = "|cffFFFFFF"},
 		sink20OutputSink = "ChatFrame",
 		sink20Sticky = true,
@@ -22,33 +27,20 @@ defaults = {
 		channelchat = false,
 		chanName = 1,
 			-- Additional Info --
-		questlink = true,
-		infoType = false,
-		infoLevel = false,
-		infoDaily = false,
+		questlink = true, infoSuggGroup = false, infoLevel = false, infoFrequency = false,
 			--Quest Start/End --
-		questAccept = false,
-		questTurnin = false,
-		questEscort = false,
-		infoAutoComp = false,
-		infoFail = false,		
+		questAccept = false, questTurnin = false, questEscort = false, infoAutoComp = false, infoFail = false,		
 			-- Sound --
-		enableCompletionSound = true,
-		enableCommSound = false,
-		enableAcceptFailSound = false,
-		annSoundName = "PVPFlagCapturedHorde",
-		annSoundFile = "Sound\\Interface\\PVPFlagCapturedHordeMono.wav",
-		compSoundName = "PVPFlagCaptured",
-		compSoundFile = "Sound\\Interface\\PVPFlagCapturedMono.wav",
-		commSoundName = "GM ChatWarning",
-		commSoundFile = "Sound\\Interface\\GM_ChatWarning.ogg",
-		acceptSoundName = "Hearthstone-QuestAccepted",
-		acceptSoundFile = "Interface\\Addons\\ObjectiveAnnouncer\\Sounds\\Hearthstone-QuestingAdventurer_QuestAccepted.ogg",		
-		failSoundName = "Hearthstone-QuestFailed",
-		failSoundFile = "Interface\\Addons\\ObjectiveAnnouncer\\Sounds\\Hearthstone-QuestingAdventurer_QuestFailed.ogg",
+		enableCompletionSound = true, enableCommSound = false, enableAcceptFailSound = false,
+		annSoundName = "PVPFlagCapturedHorde", annSoundFile = "Sound\\Interface\\PVPFlagCapturedHordeMono.wav",
+		compSoundName = "PVPFlagCaptured", compSoundFile = "Sound\\Interface\\PVPFlagCapturedMono.wav",
+		commSoundName = "GM ChatWarning", commSoundFile = "Sound\\Interface\\GM_ChatWarning.ogg",
+		acceptSoundName = "Hearthstone-QuestAccepted", acceptSoundFile = "Interface\\Addons\\ObjectiveAnnouncer\\Sounds\\Hearthstone-QuestingAdventurer_QuestAccepted.ogg",		
+		failSoundName = "Hearthstone-QuestFailed", failSoundFile = "Interface\\Addons\\ObjectiveAnnouncer\\Sounds\\Hearthstone-QuestingAdventurer_QuestFailed.ogg",
+			-- Out of Range Alerts --
+		enableOOR = true,	-- debug
 	}
 }
-
 
 
 function ObjAnnouncer:OnInitialize()
@@ -56,9 +48,6 @@ function ObjAnnouncer:OnInitialize()
 	objCSaved = {}
 	questCSaved = {}
 	objDescSaved = {}
-
-	qidComplete = 0
-	turnLink = nil
 
 	helpText = [[Usage:
    |cff55ffff/oa or /obja|r Open options interface
@@ -69,6 +58,7 @@ function ObjAnnouncer:OnInitialize()
    |cff55ff55/oa progq|r Progress and Completed Quests
    |cff55ff55/oa self|r Toggle Self Messages
    |cff55ff55/oa pub |r<|cff55ff55channel|r> Toggle Public Channels
+   |cff55ff55/oa oor|r Toggle Out-of-range Alerts
    |cff55ff55/oa accept|r Toggle "Accept A Quest"
    |cff55ff55/oa turnin|r Toggle "Turn In A Quest"
    |cff55ff55/oa escort|r Toggle "Auto-Accept Escort/Event Quests"
@@ -170,6 +160,15 @@ function ObjAnnouncer:OnInitialize()
 				ObjAnnouncer:Print("Valid public chat names are: say, party, instance, raid, guild, officer & channel.")
 			end
 		end,
+		["oor"] = function(v)
+			if self.db.profile.enableOOR then
+				self.db.profile.enableOOR = false
+				ObjAnnouncer:Print("Out-of-range Alerts |cFFFF0000Disabled|r")
+			else
+				self.db.profile.enableOOR = true
+				ObjAnnouncer:Print("Out-of-range Alerts |cFF00FF00Enabled|r")
+			end
+		end,			
 		["accept"] = function(v)
 			if self.db.profile.questAccept then
 				self.db.profile.questAccept = false
@@ -356,7 +355,7 @@ function ObjAnnouncer:OnInitialize()
 								width = "half"
 							},
 							guild = {
-								name = "|cFF40ff40Guild",
+								name = "|cFF40FF40Guild",
 								desc = "Sets whether to announce to Guild Chat|n|cFFF02121(Disables Officer Chat announcements).",
 								type = "toggle",
 								set = function(info,val) self.db.profile.guildchat = val end,
@@ -365,7 +364,7 @@ function ObjAnnouncer:OnInitialize()
 								width = "half"
 							},
 							officer = {
-								name = "|cFF40c040Officer",
+								name = "|cFF40C040Officer",
 								desc = "Sets whether to announce to Officer Chat.|n|cFF9ffbff(Only if no announcement has already been sent to Guild)",
 								type = "toggle",
 								disabled = function() return self.db.profile.guildchat end,
@@ -375,7 +374,7 @@ function ObjAnnouncer:OnInitialize()
 								width = "half",
 							},
 							channel = {
-								name = "|cFFffc0c0Channel",
+								name = "|cFFFFC0C0Channel",
 								desc = "Sets whether to announce to a channel. Please don't be rude!",
 								type = "toggle",
 								set = function(info,val) self.db.profile.channelchat = val end,
@@ -402,11 +401,27 @@ function ObjAnnouncer:OnInitialize()
 							},
 						},
 					},
+					oorAlerts = {
+						inline = true,
+						name = "|TInterface\\Icons\\ability_rogue_combatexpertise:18|t Out-Of-Range Alerts:",
+						type="group",
+						order = 4,
+						args={
+							qlink = {
+								name = "Enable OOR Alerts",
+								desc = "Send announcements if you do not receive credit when party members using Objective Announcer advance kill quests.|n|cFF9ffbffRequires party members to have Objective Announcer v6.0.3+.",
+								type = "toggle",
+								set = function(info,val) self.db.profile.enableOOR = val end,
+								get = function(info) return self.db.profile.enableOOR end,
+								order = 1,
+							},							
+						},
+					},					
 					extraInfo = {
 						inline = true,
 						name = "|TInterface\\Icons\\inv_jewelry_trinket_15:18|t Extra Information:",
 						type="group",
-						order = 3,
+						order = 4,
 						args={
 							qlink = {
 								name = "Quest Link",
@@ -416,12 +431,12 @@ function ObjAnnouncer:OnInitialize()
 								get = function(info) return self.db.profile.questlink end,
 								order = 1,
 							},
-							qtype = {
-								name = "Quest Type",
-								desc = "Adds the quest's type to your announcements.|n|cFF9ffbff(e.g. Dungeon, Raid, PVP, etc.)",
+							qgroupsize = {
+								name = "Suggested Group",
+								desc = "Adds the quest's suggested group size to your announcements.",
 								type = "toggle",
-								set = function(info,val) self.db.profile.infoType = val end,
-								get = function(info) return self.db.profile.infoType end,
+								set = function(info,val) self.db.profile.infoSuggGroup = val end,
+								get = function(info) return self.db.profile.infoSuggGroup end,
 								order = 2,
 							},
 							qlevel = {
@@ -432,21 +447,21 @@ function ObjAnnouncer:OnInitialize()
 								get = function(info) return self.db.profile.infoLevel end,
 								order = 3,
 							},
-							qdaily = {
-								name = "Is A Daily",
-								desc = "Adds whether it's a daily quest to your announcements.",
+							qfreq = {
+								name = "Frequency",
+								desc = "Adds whether it's a daily or weekly quest to your announcements.",
 								type = "toggle",
-								set = function(info,val) self.db.profile.infoDaily = val end,
-								get = function(info) return self.db.profile.infoDaily end,
+								set = function(info,val) self.db.profile.infoFrequency = val end,
+								get = function(info) return self.db.profile.infoFrequency end,
 								order = 4,
 							},						
 						},
 					},
-					questGivers = {
+					questStartEnd = {
 						inline = true,
 						name = "|TInterface\\Icons\\Achievement_quests_completed_08:18|t Quest Start/End:",
 						type="group",
-						order = 4,
+						order = 5,
 						args={
 							accept = {
 								name = "Accept a Quest",
@@ -502,11 +517,11 @@ function ObjAnnouncer:OnInitialize()
 						inline = true,
 						name = "|TInterface\\Icons\\Inv_misc_archaeology_trolldrum:18|t Sound:",
 						type="group",
-						order = 5,
+						order = 6,
 						args={
 							soundCompletion = {
 								name = "Completion Sounds",
-								desc = "Sets whether to play sounds when announcements are made.",
+								desc = "Sets whether to play sounds when announcements are made.|n|cFF9ffbffOnly plays if an announcement is sent",
 								type = "toggle",
 								set = function(info,val) self.db.profile.enableCompletionSound = val end,
 								get = function(info) return self.db.profile.enableCompletionSound end,
@@ -541,7 +556,7 @@ function ObjAnnouncer:OnInitialize()
 							},
 							soundAcceptFail = {
 								name = "Accept/Fail Sounds",
-								desc = "Sets whether to play sounds when accepting or failing a quest",
+								desc = "Sets whether to play sounds when accepting or failing a quest.|n|cFF9ffbffOnly plays if an announcement is sent",
 								type = "toggle",
 								set = function(info,val) self.db.profile.enableAcceptFailSound = val end,
 								get = function(info) return self.db.profile.enableAcceptFailSound end,
@@ -552,7 +567,7 @@ function ObjAnnouncer:OnInitialize()
 								dialogControl = 'LSM30_Sound',
 								values = AceGUIWidgetLSMlists.sound,
 								order = 5,
-								name = "Objective Accept",
+								name = "Quest Accept",
 								desc = "Select a sound to play when you accept a new quest",
 								get = function() return self.db.profile.acceptSoundName end,
 								set = function(info, value)
@@ -629,26 +644,35 @@ function ObjAnnouncer:OnInitialize()
 	libsink.order = 2
 		--[[ Hide LibSink outputs that would conflict with public announcements ]]--
 	libsink.args.Channel.hidden = true	-- If someone selected a channel here, self messages would report to a public channel if all public channels were disabled in OA.  Best to disable this.
-	libsink.args.None.hidden = true	-- We already have a way to disable self announcements
+	libsink.args.None.hidden = true		-- We already have a way to disable self announcements
 	libsink.args.Default.hidden = true	--  Could cause self announcements to announce to public channels...maybe.  In any case, unnecessary.
 	
 end
 
 
 function ObjAnnouncer:OnEnable()
-
 	function oaeventHandler(event, ...)
 		local logIndex = GetQuestLogIndexByID(qidComplete)
-		if  logIndex == 0 and turnLink ~= nil then -- Checks to see if the quest that fired the QUEST_COMPLETE event is no longer in the quest log.
-			local Message = "Quest Turned In -- "..turnLink
-			oaMessageHandler(Message, true)
-			turnLink = nil
+		if  logIndex == 0 then -- Checks to see if the quest that fired the QUEST_COMPLETE event is no longer in the quest log.
+			local qIDstring = tostring(qidComplete)
+			table.insert(oorCompletedQIDs,qIDstring)			
+			--[[ Clear oorGroupStorage of unneeded data. ]]--
+			for groupMemb = 1, #oorGroupStorage do				
+				if oorGroupStorage[groupMemb][qIDstring] then
+					table.remove(oorGroupStorage[groupMemb][qIDstring])
+				end
+			end
+			if self.db.profile.questTurnin and turnLink ~= nil then
+				local Message = "Quest Turned In -- "..turnLink
+				oaMessageHandler(Message, true)
+				turnLink = nil
+			end
 		end
 		local numEntries, numQuests = GetNumQuestLogEntries()
 		if numEntries ~= EntriesSaved or numQuests ~= QuestsSaved then
 			EntriesSaved, QuestsSaved = GetNumQuestLogEntries()
 			for questIndex = 1, EntriesSaved do
-				local questTitle, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, questID = GetQuestLogTitle(questIndex)
+				local questTitle, level, suggestedGroup, isHeader, isCollapsed, isComplete, frequency, questID = GetQuestLogTitle(questIndex)
 				if isHeader ~= 1 then
 					questCSaved[questIndex] = isComplete
 					for boardIndex = 1, GetNumQuestLeaderBoards(questIndex) do
@@ -661,7 +685,7 @@ function ObjAnnouncer:OnEnable()
 			flagQuestTurnin = false
 		else
 			for questIndex = 1, numEntries do
-				local questTitle, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, questID = GetQuestLogTitle(questIndex)
+				local questTitle, level, suggestedGroup, isHeader, isCollapsed, isComplete, frequency, questID = GetQuestLogTitle(questIndex)
 				if isHeader ~= 1 then
 			--[[ Announcements Logic ]]-- 
 				--[[ Failed Quests ]]--
@@ -670,12 +694,12 @@ function ObjAnnouncer:OnEnable()
 						questLink = GetQuestLink(questIndex)
 						failedMessage = questLink.." -- QUEST FAILED"
 						oaMessageHandler(failedMessage, true, false, false, isComplete)
-					end			
+					end
 				--[[ Completed Quests Only ]]--
 					if isComplete == 1 and isComplete ~= questCSaved[questIndex] then
 						questCSaved[questIndex] = isComplete
 						if self.db.profile.annType ==  1 then
-							oaMessageCreator(questIndex, nil, true, level, questTag, isComplete, isDaily)
+							oaMessageCreator(questIndex, nil, true, level, suggestedGroup, isComplete, frequency)
 						end
 					end
 				--[[ Completed Objectives (and Completed Quests, if Announce Type 3 is selected) ]]--
@@ -684,185 +708,257 @@ function ObjAnnouncer:OnEnable()
 						if (objComplete) and objComplete ~= objCSaved[questIndex][boardIndex] then
 							objCSaved[questIndex][boardIndex] = objComplete
 							if self.db.profile.annType == 2 or self.db.profile.annType == 3 then					
-								oaMessageCreator(questIndex, objDesc, objComplete, level, questTag, isComplete, isDaily)
+								oaMessageCreator(questIndex, objDesc, objComplete, level, suggestedGroup, isComplete, frequency)
 							end
 						end
 					--[[ Announces the progress of objectives (and Completed Quests, if Announce Type 5 is selected)]]--
-						if objDesc ~= objDescSaved[questIndex][boardIndex] and string.find(objDesc, ": 0/") == nil then
-							objDescSaved[questIndex][boardIndex] = objDesc	
-							if self.db.profile.annType == 4 or self.db.profile.annType == 5 then
-								oaMessageCreator(questIndex, objDesc, objComplete, level, questTag, isComplete, isDaily)
+						if objDesc ~= objDescSaved[questIndex][boardIndex] then
+							if not string.find(objDesc, ": 0/") then
+								objDescSaved[questIndex][boardIndex] = objDesc	
+								if self.db.profile.annType == 4 or self.db.profile.annType == 5 then
+									oaMessageCreator(questIndex, objDesc, objComplete, level, suggestedGroup, isComplete, frequency)
+								end
+							end
+						--[[  Send progress to other OA users for OOR Alerts. ]]--
+							if (IsInGroup() or IsInRaid()) and (string.find(objDesc, "killed") or string.find(objDesc, "slain")) then	-- debug
+								local chanType = "RAID"	-- "RAID" sends messages to party if not in raid, but check to be sure.									
+								if IsInGroup() then chanType = "PARTY" end
+							--	chanType = "GUILD"	-- Debug
+								local objComp = "false"
+								if objComplete then objComp = "true" end
+								oorCommMessage = strjoin("\a", questID, objDesc, objComp, boardIndex)								
+								ObjAnnouncer:SendCommMessage("ObjA OOR", oorCommMessage, chanType)
 							end
 						end
 					end
 				end
 			end
-		end
+		end		
 	end
 
-	function oaMessageCreator(questIndex, objDesc, objComplete, level, questTag, isComplete, isDaily)
-	
-		local divider = false
-	
-		if self.db.profile.questlink then 
-			questLink = GetQuestLink(questIndex)
-			messageInfoLink = strjoin("", "  --  ", questLink)
-		else
-			messageInfoLink = ""
-		end
-		if self.db.profile.infoType then
-			if (questTag) then
-				messageInfoType = strjoin("", " ", questTag)
-				divider = true
-			else
-				messageInfoType = ""
-			end
-		else
-			messageInfoType = ""
-		end
-		if isDaily and self.db.profile.infoDaily then
-			messageInfoDaily = " Daily"
-			divider = true
-		else
-			messageInfoDaily = ""
-		end
-		if self.db.profile.infoLevel then
-			local temp = tostring(level)
-			messageInfoLevel = strjoin("", " [", temp, "]")
-			divider = true
-		else
-			messageInfoLevel = ""
-		end
-		if divider then 
-			infoDivider = " --" 
-		else
-			infoDivider = ""
-		end
-		
-		if self.db.profile.annType == 1 then
-			finalAnnouncement = "QUEST COMPLETE -- "..questLink..infoDivider..messageInfoType..messageInfoDaily..messageInfoLevel	-- This announcement type ignores self.db.profile.questlink to ensure that a quest link is always displayed.
-		else
-			finalAnnouncement = objDesc..messageInfoLink..infoDivider..messageInfoType..messageInfoDaily..messageInfoLevel
-			if (self.db.profile.annType == 3 or self.db.profile.annType == 5) and isComplete == 1 then
-				finalAnnouncement = finalAnnouncement.." -- QUEST COMPLETE"
-			end
-		end
-		oaMessageHandler(finalAnnouncement, true, objComplete, objComplete, isComplete)
-	end	
-	
-	function oaMessageHandler(announcement, enableSelf, enableSound, enableComm, isComplete)
-		local selfTest = true	-- Variable to see if any conditions have fired.
-		if self.db.profile.raidchat == true and IsInRaid() then
-			SendChatMessage(announcement, "RAID")
-			if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest raid", "RAID") end
-			selfTest = false
-		elseif self.db.profile.instancechat and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
-			SendChatMessage(announcement, "INSTANCE_CHAT")
-			if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest instance", "PARTY") end
-			selfTest = false
-		elseif self.db.profile.partychat and IsInGroup(LE_PARTY_CATEGORY_HOME) then
-			SendChatMessage(announcement, "PARTY")
-			if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest party", "PARTY") end
-			selfTest = false
-		elseif self.db.profile.saychat and UnitIsDeadOrGhost("player") == nil then
-			SendChatMessage(announcement, "SAY")
-			if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest say", "PARTY") end
-			selfTest = false
-		end
-		if self.db.profile.guildchat and IsInGuild() then
-			SendChatMessage(announcement, "GUILD")
-			if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest guild", "GUILD") end
-			selfTest = false
-		elseif self.db.profile.officerchat and CanViewOfficerNote() then
-			SendChatMessage(announcement, "OFFICER")
-			if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest officer", "GUILD") end
-			selfTest = false
-		end
-		if self.db.profile.channelchat then
-			SendChatMessage(announcement, "CHANNEL", nil, self.db.profile.chanName)
-			selfTest = false
-		end
-	--	if enableSelf then	-- Every announcement message is currently enabled for self reporting, so this test is unnecessary.  It might be useful in the future though, so I'll just comment it out.
-			if self.db.profile.selftellalways then
-				ObjAnnouncer:Pour(announcement, self.db.profile.selfColor.r, self.db.profile.selfColor.g, self.db.profile.selfColor.b)
-			elseif self.db.profile.selftell and selfTest then
-				ObjAnnouncer:Pour(announcement, self.db.profile.selfColor.r, self.db.profile.selfColor.g, self.db.profile.selfColor.b)
-			end
-	--	end
-		if enableSound and self.db.profile.enableCompletionSound then
-			if isComplete == 1 then
-				PlaySoundFile(self.db.profile.compSoundFile,"Master")
-			elseif isComplete == -1 and self.db.profile.enableAcceptFailSound then	
-					PlaySoundFile(self.db.profile.failSoundFile,"Master")
-			else
-				PlaySoundFile(self.db.profile.annSoundFile,"Master")
-			end
-		end
-	end
-	
-	function oacommandHandler(input)
-		local linput = string.lower(input)
-		local k,v = string.match(linput, "([%w%+%-%=]+) ?(.*)")
-		if slashCommands[k] then	-- If valid...
-			slashCommands[k](v)
-		elseif k then	-- If user typed something invalid, show help.
-           ObjAnnouncer:Print(helpText)		
-		else
-			InterfaceOptionsFrame_OpenToCategory(optionsGUI)
-		end
-	end
-
-	function oareceivedComm(prefix, commIn, dist, sender)
-		local announceType, announceChannel = ObjAnnouncer:GetArgs(commIn, 2, 1)
-		if (announceChannel == "party" or announceChannel == "raid") and self.db.profile.enableCommSound == true and sender ~= playerName then
-			PlaySoundFile(self.db.profile.commSoundFile)
-		end
-	end
-
-	function oaQuestAccepted(event, ...)
-		if self.db.profile.questAccept then
-			local questLogIndex = ...
-			local acceptedLink = GetQuestLink(questLogIndex)
-			local Message = "Quest Accepted -- "..acceptedLink
-			if self.db.profile.enableAcceptFailSound then PlaySoundFile(self.db.profile.acceptSoundFile,"Master") end
-			oaMessageHandler(Message, true)
-		end
-	end
-
-	function oaQuestTurnin(event, ...)
-		qidComplete = GetQuestID()
-		turnLink = GetQuestLink(GetQuestLogIndexByID(qidComplete))
-	end
-	
-	function oaAutoComplete(event, ...)
-		local acID = ...
-		local qIndex = GetQuestLogIndexByID(acID)
-		local qLink = GetQuestLink(qIndex)
-		local message = "AUTO-COMPLETE ALERT -- "..qLink
-		oaMessageHandler(message, true)
-		ShowQuestComplete(qIndex)	-- Automatically brings up the quest turn-in dialog window.
-	end
-	
-	function oaAcceptEscort(event, ...)
-		if self.db.profile.questEscort then
-			local starter, questTitle = ...
-			ConfirmAcceptQuest()
-			StaticPopup_Hide("QUEST_ACCEPT")
-			local starterClass = select(2, UnitClass(starter))
-			local classColor = RAID_CLASS_COLORS[starterClass]
-			local colorStarter = "|cff"..string.format("%02X%02X%02X",classColor.r*255, classColor.g*255, classColor.b*255)..starter.."|r"
-			local Message = "Automatically accepted: |cffffef82"..questTitle.."|r -- Started by: "..colorStarter
-			ObjAnnouncer:Print(Message)
-		end
-	end
-	
 	ObjAnnouncer:RegisterEvent("QUEST_LOG_UPDATE", oaeventHandler)
 	ObjAnnouncer:RegisterEvent("QUEST_ACCEPTED", oaQuestAccepted)
-	if self.db.profile.questTurnin then ObjAnnouncer:RegisterEvent("QUEST_COMPLETE", oaQuestTurnin)	end
+	ObjAnnouncer:RegisterEvent("QUEST_COMPLETE", oaQuestTurnin)
 	ObjAnnouncer:RegisterEvent("QUEST_ACCEPT_CONFIRM", oaAcceptEscort)
 	if self.db.profile.infoAutoComp then ObjAnnouncer:RegisterEvent("QUEST_AUTOCOMPLETE", oaAutoComplete) end
 	ObjAnnouncer:RegisterChatCommand("oa", oacommandHandler)
 	ObjAnnouncer:RegisterChatCommand("obja", oacommandHandler)
 	ObjAnnouncer:RegisterComm("Obj Announcer", oareceivedComm)
-	DEFAULT_CHAT_FRAME:AddMessage("|cffcc33ffObjective Announcer".." "..version.." Loaded.  Type|r /oa help |cffcc33fffor list of commands.|r")
+	ObjAnnouncer:RegisterComm("ObjA OOR", oaOORHandler)	-- Always enabled so group objective progress can be recorded. This allows OOR alerts to work immediately upon being enabled.
+	DEFAULT_CHAT_FRAME:AddMessage("|cffcc33ffObjective Announcer".." "..version.." Loaded.  Type|r /oa help |cffcc33fffor list of commands.|r")	
 end
+	
+function oaMessageCreator(questIndex, objDesc, objComplete, level, suggestedGroup, isComplete, frequency)
+
+	local divider = false
+
+	if self.db.profile.questlink then 
+		questLink = GetQuestLink(questIndex)
+		messageInfoLink = strjoin("", "  --  ", questLink)
+	else
+		messageInfoLink = ""
+	end
+	if self.db.profile.infoSuggGroup then
+		if (suggestedGroup > 0) then
+			local temp = tostring(suggestedGroup)
+			messageInfoSuggGroup = strjoin("", " [Group: ", temp, "]")
+			divider = true
+		else
+			messageInfoSuggGroup = ""
+		end
+	else
+		messageInfoSuggGroup = ""
+	end
+	if (frequency > 1) and self.db.profile.infoFrequency then
+		if frequency == 2 then messageInfoFrequency = " Daily" elseif frequency == 3 then messageInfoFrequency = " Weekly" end
+		divider = true
+	else
+		messageInfoFrequency = ""
+	end
+	if self.db.profile.infoLevel then
+		local temp = tostring(level)
+		messageInfoLevel = strjoin("", " [", temp, "]")
+		divider = true
+	else
+		messageInfoLevel = ""
+	end
+	if divider then 
+		infoDivider = " --" 
+	else
+		infoDivider = ""
+	end
+	
+	if self.db.profile.annType == 1 then
+		finalAnnouncement = "QUEST COMPLETE -- "..questLink..infoDivider..messageInfoSuggGroup..messageInfoFrequency..messageInfoLevel	-- This announcement type ignores self.db.profile.questlink to ensure that a quest link is always displayed.
+	else
+		finalAnnouncement = objDesc..messageInfoLink..infoDivider..messageInfoSuggGroup..messageInfoFrequency..messageInfoLevel
+		if (self.db.profile.annType == 3 or self.db.profile.annType == 5) and isComplete == 1 then
+			finalAnnouncement = finalAnnouncement.." -- QUEST COMPLETE"
+		end
+	end
+	oaMessageHandler(finalAnnouncement, true, objComplete, objComplete, isComplete)
+end	
+
+function oaMessageHandler(announcement, enableSelf, enableSound, enableComm, isComplete, oorAlert)
+	local selfTest = true	-- Variable to see if any conditions have fired.
+	if self.db.profile.raidchat == true and IsInRaid() then
+		SendChatMessage(announcement, "RAID")
+		if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest raid", "RAID") end
+		selfTest = false
+	elseif self.db.profile.instancechat and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+		SendChatMessage(announcement, "INSTANCE_CHAT")
+		if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest instance", "PARTY") end
+		selfTest = false
+	elseif self.db.profile.partychat and IsInGroup(LE_PARTY_CATEGORY_HOME) then
+		SendChatMessage(announcement, "PARTY")
+		if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest party", "PARTY") end
+		selfTest = false
+	elseif self.db.profile.saychat and UnitIsDeadOrGhost("player") == nil then
+		SendChatMessage(announcement, "SAY")
+	--	if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest say", "PARTY") end
+		selfTest = false
+	end
+	if self.db.profile.guildchat and IsInGuild() then
+		SendChatMessage(announcement, "GUILD")
+	--	if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest guild", "GUILD") end
+		selfTest = false
+	elseif self.db.profile.officerchat and CanViewOfficerNote() then
+		SendChatMessage(announcement, "OFFICER")
+	--	if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest officer", "GUILD") end
+		selfTest = false
+	end
+	if self.db.profile.channelchat then
+		SendChatMessage(announcement, "CHANNEL", nil, self.db.profile.chanName)
+		selfTest = false
+	end
+--	if enableSelf then	-- Every announcement message is currently enabled for self reporting, so this test is unnecessary.  It might be useful in the future though, so I'll just comment it out.
+		if self.db.profile.selftellalways then
+			ObjAnnouncer:Pour(announcement, self.db.profile.selfColor.r, self.db.profile.selfColor.g, self.db.profile.selfColor.b)
+		elseif self.db.profile.selftell and selfTest then
+			ObjAnnouncer:Pour(announcement, self.db.profile.selfColor.r, self.db.profile.selfColor.g, self.db.profile.selfColor.b)
+		end
+--	end
+	if enableSound then
+		if isComplete == 1 and self.db.profile.enableCompletionSound then
+			PlaySoundFile(self.db.profile.compSoundFile,"Master")
+		elseif self.db.profile.enableCompletionSound then
+			PlaySoundFile(self.db.profile.annSoundFile,"Master")			
+		elseif isComplete == -1 and self.db.profile.enableAcceptFailSound then	
+			PlaySoundFile(self.db.profile.failSoundFile,"Master")
+		end
+	end
+end
+
+--[[ Slash Commands Handler ]]--
+
+function oacommandHandler(input)
+	local k,v = string.match(string.lower(input), "([%w%+%-%=]+) ?(.*)")
+	if slashCommands[k] then	-- If valid...
+		slashCommands[k](v)
+	elseif k then	-- If user typed something invalid, show help.
+	   ObjAnnouncer:Print(helpText)		
+	else
+		InterfaceOptionsFrame_OpenToCategory(optionsGUI)
+	end
+end
+
+-- [[ Addon Communication Functions ]]--
+
+function oareceivedComm(prefix, commIn, dist, sender)
+	local announceType, announceChannel = ObjAnnouncer:GetArgs(commIn, 2, 1)
+	if  self.db.profile.enableCommSound and sender ~= playerName and (announceChannel == "party" or announceChannel == "raid") == true then
+		PlaySoundFile(self.db.profile.commSoundFile)
+	end
+end
+
+function oaOORHandler(prefix, text, dist, groupMember)
+	if groupMember =~ playerName then	-- debug
+		local oorQuestID, oorObjDesc, oorObjComplete, oorBoardIndex = strsplit("\a", text, 4)
+		if not oorCompletedQIDs[oorQuestID] then	-- Don't execute for quests that we have completed and turned in this session. (Is this even necessary?)
+			if not oorGroupStorage[groupMember] then
+				oorGroupStorage[groupMember] = {}
+			end
+			if not oorGroupStorage[groupMember][oorQuestID] then
+				oorGroupStorage[groupMember][oorQuestID] = {}
+			end
+			local _, _, oorObjCurrent, oorObjTotal, oorObjText = string.find(oorObjDesc, "(%d+)/(%d+) ?(.*)")
+			local myLogIndex = GetQuestLogIndexByID(oorQuestID)	
+			if enableOOR and myLogIndex > 0 then	-- Is quest in our log?	
+				local myObjDesc, myObjType, myObjComplete = GetQuestLogLeaderBoard(oorBoardIndex, myLogIndex)			
+				if not myObjComplete then	-- Don't execute if we're already done with the objective
+					local _, _, myObjCurrent, myObjTotal, myObjText = string.find(myObjDesc, "(%d+)/(%d+) ?(.*)")
+					if not oorGroupStorage[groupMember][oorQuestID][oorBoardIndex] then
+						oorGroupStorage[groupMember][oorQuestID][oorBoardIndex] = {mySavedCurrent = myObjCurrent, savedDelta = oorObjCurrent - myObjCurrent}
+					end				
+					local currentDelta = oorObjCurrent - myObjCurrent		
+					if currentDelta > oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta then	-- If current delta increased over previous delta, we missed an objective. If delta decreased, do nothing.
+						local qlink = GetQuestLink(myLogIndex)
+						local announcement = groupMember.."'s Objective Credit Not Received: \""..myObjText.."\" -- "..qlink
+						oaMessageHandler(announcement, true, false, false, false, true)					
+					end	
+					oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].mySavedCurrent = myObjCurrent
+					oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta = currentDelta
+				end
+			else	-- Else, we still save the delta so we can use it when needed.
+				if not oorGroupStorage[groupMember][oorQuestID][oorBoardIndex] then
+					oorGroupStorage[groupMember][oorQuestID][oorBoardIndex] = {savedDelta = oorObjCurrent}
+				else
+					oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta = oorObjCurrent
+				end
+			end
+		end
+	end	-- Debug
+end
+
+-- [[ Extra Announcements Functions ]] --
+
+function oaQuestAccepted(event, ...)
+	local questLogIndex = ...
+	--[[ Create initial entry in group members' OOR storage ]]--
+		local initQID = GetQuestID()
+		for boardIndex = 1, GetNumQuestLeaderBoards(questLogIndex) do
+			local objDesc, objType, objComplete = GetQuestLogLeaderBoard(boardIndex, questLogIndex)		
+			if (IsInGroup() or IsInRaid()) and (string.find(objDesc, "killed") or string.find(objDesc, "slain")) then	-- debug
+				local chanType = "RAID"	-- "RAID" sends messages to party if not in raid, but check to be sure.									
+				if IsInGroup() then chanType = "PARTY" end
+			--	chanType = "GUILD"	-- Debug
+				local objComp = "false"
+				if objComplete then objComp = "true" end
+				oorCommMessage = strjoin("\a", initQID, objDesc, objComp, boardIndex)								
+				ObjAnnouncer:SendCommMessage("ObjA OOR", oorCommMessage, chanType)	
+			end
+		end
+	if self.db.profile.questAccept then		
+		local acceptedLink = GetQuestLink(questLogIndex)
+		local Message = "Quest Accepted -- "..acceptedLink
+		if self.db.profile.enableAcceptFailSound then PlaySoundFile(self.db.profile.acceptSoundFile,"Master") end
+		oaMessageHandler(Message, true)
+	end
+end
+
+function oaQuestTurnin(event, ...)
+	qidComplete = GetQuestID()
+	turnLink = GetQuestLink(GetQuestLogIndexByID(qidComplete))
+end
+
+function oaAutoComplete(event, ...)
+	local acID = ...
+	local qIndex = GetQuestLogIndexByID(acID)
+	local qLink = GetQuestLink(qIndex)
+	local message = "AUTO-COMPLETE ALERT -- "..qLink
+	oaMessageHandler(message, true)
+	ShowQuestComplete(qIndex)	-- Automatically brings up the quest turn-in dialog window.
+end
+
+function oaAcceptEscort(event, ...)
+	if self.db.profile.questEscort then
+		local starter, questTitle = ...
+		ConfirmAcceptQuest()
+		StaticPopup_Hide("QUEST_ACCEPT")
+		local starterClass = select(2, UnitClass(starter))
+		local classColor = RAID_CLASS_COLORS[starterClass]
+		local colorStarter = "|cff"..string.format("%02X%02X%02X",classColor.r*255, classColor.g*255, classColor.b*255)..starter.."|r"
+		local Message = "Automatically accepted: |cffffef82"..questTitle.."|r -- Started by: "..colorStarter
+		ObjAnnouncer:Print(Message)
+	end
+end	
