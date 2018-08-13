@@ -10,6 +10,8 @@ local LSM = LibStub("LibSharedMedia-3.0")
 local CHAT, SAY, PARTY, INSTANCE, RAID, GUILD, OFFICER, CHANNEL = _G.CHAT, _G.CHAT_MSG_SAY, _G.CHAT_MSG_PARTY, _G.INSTANCE_CHAT_MESSAGE, _G.CHAT_MSG_RAID, _G.CHAT_MSG_GUILD, _G.CHAT_MSG_OFFICER, _G.CHANNEL
 local ENABLE, DISABLED = _G.ENABLE, _G.ADDON_DISABLED
 
+
+
 local myOptions = {
 	name = NAME.." "..S.VERSION.." |cFFFF7F00by Bantou|r |cFF339900and Eincrou|r",
 	type = "group",
@@ -27,7 +29,7 @@ local myOptions = {
 					type="group",
 					order = 1,
 					args = {
-						annchandesc = {
+						annmodedesc = {
 							order = 1,
 							type = "description",
 							name = L["announcedesc"],
@@ -143,24 +145,24 @@ local myOptions = {
 							order = 14,
 							width = "half"
 						},
-						instance = {
-							name = "|cFFFD8100"..INSTANCE.."|r",
-							desc = L["instancedesc"],
-							type = "toggle",
-							set = function(info,val) ObjAnn.db.profile.instancechat = val end,
-							get = function(info) return ObjAnn.db.profile.instancechat end,
-							order = 16,
-							width = "half"
-						},
 						raid = {
 							name = "|cFFFF7F00"..RAID.."|r",
 							desc = "Sets whether to announce to Raid Chat.",
 							type = "toggle",
 							set = function(info,val) ObjAnn.db.profile.raidchat = val end,
 							get = function(info) return ObjAnn.db.profile.raidchat end,
-							order = 18,
+							order = 16,
 							width = "half"
 						},
+						instance = {
+							name = "|cFFFD8100"..INSTANCE.."|r",
+							desc = L["instancedesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.instancechat = val end,
+							get = function(info) return ObjAnn.db.profile.instancechat end,
+							order = 18,
+							width = "half"
+						},						
 						guild = {
 							name = "|cFF40FF40"..GUILD.."|r",
 							desc = L["guilddesc"],
@@ -195,9 +197,9 @@ local myOptions = {
 							values = function()
 								local ChatChannelList = {}
 								for i = 1, 10 do
-									local channelID = select((i*2)-1, GetChannelList())
+									local channelID = select((i*3)-2, GetChannelList())
 									if channelID then
-										ChatChannelList[channelID] = "|cff2E9AFE"..channelID..".|r  "..select(i*2,GetChannelList())
+										ChatChannelList[channelID] = "|cff2E9AFE"..channelID..".|r  "..select((i*3)-1,GetChannelList())
 									end
 								end
 								return ChatChannelList
@@ -292,11 +294,11 @@ local myOptions = {
 					type="group",
 					order = 5,
 					args={
-						oordesc = {
+						qsedesc = {
 							order = 10,
 							type = "description",
 							name = L["qsedesc"],
-						},			
+						},
 						taskArea = {
 							name = L["qsebonusobj"],
 							desc = L["qsebonusobjdesc"],
@@ -311,7 +313,7 @@ local myOptions = {
 							type = "header",
 							order = 20,
 							width = "double"
-						},						
+						},
 						accept = {
 							name = L["qseaccept"],
 							desc = L["qseacceptdesc"],
@@ -329,13 +331,13 @@ local myOptions = {
 							get = function(info) return ObjAnn.db.profile.questEscort end,
 							order = 50,
 							width = "double",
-						},						
+						},
 						header2 = {
 							name = L["headerend"],
 							type = "header",
 							order = 60,
 							width = "double"
-						},										
+						},
 						turnIn = {
 							name = L["qseturnin"],
 							desc = L["qseturnindesc"],
@@ -351,7 +353,7 @@ local myOptions = {
 							set = function(info,val) ObjAnn.db.profile.questAbandon = val end,
 							get = function(info) return ObjAnn.db.profile.questAbandon end,
 							order = 80,
-						},	
+						},
 						qfailed = {
 							name = L["qsefail"],
 							desc = L["qsefaildesc"],
@@ -359,34 +361,167 @@ local myOptions = {
 							set = function(info,val) ObjAnn.db.profile.questFail = val end,
 							get = function(info) return ObjAnn.db.profile.questFail end,
 							order = 90,
-						},	
-						questXP = {
-							name = L["qseexp"],
-							desc = L["qseexpdesc"],
-							type = "toggle",
-							set = function(info,val) ObjAnn.db.profile.questXP = val end,
-							get = function(info) return ObjAnn.db.profile.questXP end,
-							order = 100,
-						},		
-						questRewards = {
-							name = L["qserewards"],
-							desc = L["qserewardsdesc"],
-							type = "toggle",
-							set = function(info,val) ObjAnn.db.profile.questRewards = val end,
-							get = function(info) return ObjAnn.db.profile.questRewards end,
-							order = 110,
-						},							
-									
+						},
 						qautocomp = {
 							name = L["qseautocomplete"],
 							desc = L["qseautocompletedesc"],
 							type = "toggle",
 							set = function(info,val) ObjAnn.db.profile.infoAutoComp = val end,
 							get = function(info) return ObjAnn.db.profile.infoAutoComp end,
-							order = 120,								
+							order = 100,
 						},
 					},
-				},					
+				},
+				questRewards = {
+				--	inline = true,
+					name = "|TInterface\\Icons\\Racial_Dwarf_FindTreasure.blp:18|t "..L["questrewards"],
+					desc = L["qsedesc"],
+					type="group",
+					order = 5,
+					args={
+						qrdesc = {
+							order = 10,
+							type = "description",
+							name = L["qrdesc"],
+						},
+						qrRewards = {
+							name = L["qrrewards"],
+							desc = L["qrrewardsdesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.questRewards = val end,
+							get = function(info) return ObjAnn.db.profile.questRewards end,
+							order = 20,
+							--width = "double",
+						},
+						qrSelf = {
+							name = L["qrself"],
+							desc = L["qrselfdesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.rewardSelf = val end,
+							get = function(info) return ObjAnn.db.profile.rewardSelf end,
+							order = 21,
+							disabled = function() return not ObjAnn.db.profile.questRewards end,
+							width = "half",
+						},	
+					--[[ Basic ]]--
+						qrheader1 = {
+							name = L["qrheaderbasic"],
+							type = "header",
+							order = 30,
+							width = "double",
+							disabled = function() return not ObjAnn.db.profile.questRewards end,
+						},						
+						qrXP = {
+							name = "|TInterface\\Icons\\XP_ICON.blp:18|t "..L["qrxp"],
+							desc = L["qrxpdesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.rewardXP = val end,
+							get = function(info) return ObjAnn.db.profile.rewardXP end,
+							order = 40,
+							disabled = function() return not ObjAnn.db.profile.questRewards end,
+							width = "half",
+						},
+						qrMoney = {
+							name = "|TInterface\\Icons\\INV_Misc_Coin_01.blp:18|t "..L["qrmoney"],
+							desc = L["qrmoneydesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.rewardMoney = val end,
+							get = function(info) return ObjAnn.db.profile.rewardMoney end,
+							order = 50,
+							disabled = function() return not ObjAnn.db.profile.questRewards end,
+							width = "half",
+						},
+						qrItems = {
+							name = "|TInterface\\Icons\\inv_misc_chest_azerite.blp:18|t "..L["qritems"],
+							desc = L["qritemsdesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.rewardItems = val end,
+							get = function(info) return ObjAnn.db.profile.rewardItems end,
+							order = 60,
+							disabled = function() return not ObjAnn.db.profile.questRewards end,
+							width = "half",
+						},
+						qrCurrency = {
+							name = "|TInterface\\Icons\\PVECurrency-Justice.blp:18|t "..L["qrcurrency"],
+							desc = L["qrcurrencydesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.rewardCurrency = val end,
+							get = function(info) return ObjAnn.db.profile.rewardCurrency end,
+							order = 70,
+							disabled = function() return not ObjAnn.db.profile.questRewards end,
+						},
+					--[[ Advanced ]]--
+						qrheader2 = {
+							name = L["qrheaderadv"],
+							type = "header",
+							order = 80,
+							width = "double",
+							disabled = function() return not ObjAnn.db.profile.questRewards end,
+						},	
+						qrHonor = {
+							name = function()
+								local honorIcon
+								local faction = UnitFactionGroup("player")
+								if faction == "Alliance" then
+									honorIcon = "PVPCurrency-Honor-Alliance"
+								elseif faction == "Horde" then
+									honorIcon = "PVPCurrency-Honor-Horde"
+								else
+									honorIcon = "PVPCurrency-Honor-Neutral"
+								end
+								return "|TInterface\\Icons\\"..honorIcon..".blp:18|t "..L["qrhonor"]
+							end,
+							
+							--"|TInterface\\Icons\\"....".blp:18|t "..L["qrhonor"],
+							desc = L["qrhonordesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.rewardHonor = val end,
+							get = function(info) return ObjAnn.db.profile.rewardHonor end,
+							order = 90,
+							disabled = function() return not ObjAnn.db.profile.questRewards end,
+							width = "half",
+						},
+						qrSpell = {
+							name = "|TInterface\\Icons\\Spell_Holy_ArcaneIntellect.blp:18|t "..L["qrspell"],
+							desc = L["qrspelldesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.rewardSpell = val end,
+							get = function(info) return ObjAnn.db.profile.rewardSpell end,
+							order = 100,
+							disabled = function() return not ObjAnn.db.profile.questRewards end,
+							width = "half",
+						},
+						qrSkill = {
+							name = "|TInterface\\Icons\\INV_Pick_01.blp:18|t "..L["qrskill"],
+							desc = L["qrskilldesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.rewardSkill = val end,
+							get = function(info) return ObjAnn.db.profile.rewardSkill end,
+							order = 110,
+							disabled = function() return not ObjAnn.db.profile.questRewards end,
+							width = "half",
+						},
+						qrTitle = {
+							name = "|TInterface\\Icons\\INV_Misc_Note_01.blp:18|t "..L["qrtitle"],
+							desc = L["qrtitledesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.rewardSkill = val end,
+							get = function(info) return ObjAnn.db.profile.rewardSkill end,
+							order = 120,
+							disabled = function() return not ObjAnn.db.profile.questRewards end,
+							width = "half",
+						},
+						qrArtifact = {
+							name = "|TInterface\\Icons\\INV_Sword_2H_ArtifactAshbringer_D_01.blp:18|t "..L["qrartifact"],
+							desc = L["qrartifactdesc"],
+							type = "toggle",
+							set = function(info,val) ObjAnn.db.profile.rewardArtifact = val end,
+							get = function(info) return ObjAnn.db.profile.rewardArtifact end,
+							order = 130,
+							disabled = function() return not ObjAnn.db.profile.questRewards end,
+						},
+					},
+				},
 				soundOptions = {
 				--	inline = true,
 					name = "|TInterface\\Icons\\Inv_misc_archaeology_trolldrum:18|t ".._G.SOUND_LABEL,
@@ -659,15 +794,6 @@ local slashCommands = {
 			ObjAnnouncer:Print(L["slashquestturnin"].." |cFF00FF00"..L["enabled"].."|r")
 		end
 	end,
-	["xp"] = function()
-		if ObjAnn.db.profile.questXP then
-			ObjAnn.db.profile.questXP = false			
-			ObjAnnouncer:Print(L["slashquestexp"].." |cFFFF0000"..DISABLED.."|r")
-		else
-			ObjAnn.db.profile.questXP = true			
-			ObjAnnouncer:Print(L["slashquestexp"].." |cFF00FF00"..L["enabled"].."|r")
-		end
-	end,	
 	["reward"] = function()
 		if ObjAnn.db.profile.questRewards then
 			ObjAnn.db.profile.questRewards = false			

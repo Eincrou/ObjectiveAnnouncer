@@ -1,6 +1,6 @@
-## Interface: 70300
+## Interface: 80000
 ## Title: Objective Announcer
-## Version: 7.3.0
+## Version: 8.0.1
 ## Notes: Announces Questing Information to Chat
 ## Author: Bantou & Eincrou
 ## SavedVariables: ObjectiveAnnouncerDB
