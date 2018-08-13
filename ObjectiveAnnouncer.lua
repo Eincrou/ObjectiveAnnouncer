@@ -417,7 +417,7 @@ function ObjAnnouncer:OnInitialize()
 								order = 4,
 							},
 							qautocomp = {
-								name = "Auto-Complete",
+								name = "Auto-Complete|n|cFF9ffbffAlso causes the remote turn-in dialogue window to appear.",
 								desc = "Send an extra announcement when you complete a quest that can be completed remotely.",
 								type = "toggle",
 								set = function(info,val) self.db.profile.infoAutoComp = val 
@@ -607,7 +607,7 @@ function ObjAnnouncer:OnEnable()
 					if isComplete == -1 and self.db.profile.infoFail and isComplete ~= questCSaved[questIndex] then
 						questCSaved[questIndex] = isComplete
 						questLink = GetQuestLink(questIndex)
-						failedMessage = questLink.." -- Has been failed!"
+						failedMessage = questLink.." -- QUEST FAILED"
 						oaMessageHandler(failedMessage, true, false, false, isComplete)
 					end			
 				--[[ Completed Quests Only ]]--
