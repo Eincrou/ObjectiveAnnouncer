@@ -9,8 +9,7 @@
   <Include file="Libs\AceGUI-3.0\AceGUI-3.0.xml"/>
   <Include file="Libs\AceGUI-3.0-SharedMediaWidgets\widget.xml"/>
   <Include file="Libs\LibSharedMedia-3.0\lib.xml"/>
+  <Include file="Libs\LibSink-2.0\lib.xml"/>
   <Script file="Libs\LibStub\LibStub.lua"/>
   <Script file="ObjectiveAnnouncer.lua"/>
 </Ui>
-
-

@@ -1,15 +1,18 @@
 
-ObjAnnouncer = LibStub("AceAddon-3.0"):NewAddon("Objective Announcer", "AceComm-3.0", "AceEvent-3.0", "AceConsole-3.0")
+ObjAnnouncer = LibStub("AceAddon-3.0"):NewAddon("Objective Announcer", "AceComm-3.0", "AceEvent-3.0", "AceConsole-3.0","LibSink-2.0")
 local LSM = LibStub("LibSharedMedia-3.0")
 local version = GetAddOnMetadata("ObjectiveAnnouncer","Version") or ""
 
 defaults = {
 	profile = {
 		--[[ General ]]--
+		annType = 2,
 			-- Announce to --
 		selftell = true,
 		selftellalways = false,
 		selfColor = {r = 1.0, g = 1.0, b = 1.0, hex = "|cffFFFFFF"},
+		sink20OutputSink = "ChatFrame",
+		sink20Sticky = true,
 		saychat = false,
 		partychat = true,
 		instancechat = true,
@@ -18,12 +21,13 @@ defaults = {
 		officerchat = false,
 		channelchat = false,
 		chanName = 1,
-			-- Stuff --
+			-- Additional Info --
 		questlink = true,
-		addinfo = false,
---		questonly = false,
---		progress = false,
-		annType = 2,
+		infoType = false,
+		infoLevel = false,
+		infoDaily = false,
+		infoAutoComp = false,
+		infoFail = false,
 			--Quest Givers --
 		questAccept = false,
 		questTurnin = false,
@@ -69,7 +73,7 @@ function ObjAnnouncer:OnInitialize()
 				args={
 					announce = {
 						name = "|TInterface\\Icons\\Ability_Warrior_RallyingCry:18|t Announcement Type:",
-						desc = "Select which type of announcements are made.",
+						desc = "Select which type of announcements are made.|n|cFF9ffbffCompleted Quests:|r Announce only when quests are finished.|n|cFF9ffbffCompleted Objectives:|r Announce only finished objectives.|n|cFF9ffbffBoth Quests & Objectives:|r Announces finished objectives and when the quest is fully complete.|n|cFF9ffbffObjective Progress:|r Announce each time an objective is advanced.|n|cFF9ffbffProgress & Completed Quests:|r Announce each time an objective is advanced and when the quest is fully completed.",
 						type = "select",
 						style = "radio",
 						values = {
@@ -89,6 +93,7 @@ function ObjAnnouncer:OnInitialize()
 						type="group",
 						order = 2,
 						args={
+						--[[ Private ]]--
 							header1 = {
 								name = "Private Announcements",
 								type = "header",
@@ -97,7 +102,7 @@ function ObjAnnouncer:OnInitialize()
 							},						
 							mememe = {
 								name = "Self",
-								desc = "Sets whether to announce to yourself when no public announcements have been made.",
+								desc = "Sets whether to announce to yourself when no public announcements have been made.|n|cFF9ffbffChoose where to output your self messages in the Self Output tab above.",
 								type = "toggle",
 								set = function(info,val) self.db.profile.selftell = val end,
 								get = function(info) return self.db.profile.selftell end,
@@ -107,7 +112,7 @@ function ObjAnnouncer:OnInitialize()
 							},
 							mememealways = {
 								name = "Always Self Announce",
-								desc = "Announce to self even while also announcing to a group.",
+								desc = "Announce to self even when a public message has been sent.",
 								type = "toggle",
 								set = function(info,val) self.db.profile.selftellalways = val end,
 								get = function(info) return self.db.profile.selftellalways end,
@@ -124,11 +129,12 @@ function ObjAnnouncer:OnInitialize()
 									self.db.profile.selfColor.hex = "|cff"..string.format("%02x%02x%02x", self.db.profile.selfColor.r * 255, self.db.profile.selfColor.g * 255, self.db.profile.selfColor.b * 255) 
 									end,								
 								order = 3,
-							},							
+							},
+						--[[ Public ]]--				
 							header2 = {
 								name = "Public Announcements",
 								type = "header",
-								order = 4,
+								order = 10,
 								width = "double"
 							},
 							say = {
@@ -137,7 +143,7 @@ function ObjAnnouncer:OnInitialize()
 								type = "toggle",
 								set = function(info,val) self.db.profile.saychat = val end,
 								get = function(info) return self.db.profile.saychat end,
-								order = 5,							
+								order = 12,							
 								width = "half"
 							},
 							party = {
@@ -146,7 +152,7 @@ function ObjAnnouncer:OnInitialize()
 								type = "toggle",
 								set = function(info,val) self.db.profile.partychat = val end,
 								get = function(info) return self.db.profile.partychat end,
-								order = 6,
+								order = 14,
 								width = "half"
 							},
 							instance = {
@@ -155,7 +161,7 @@ function ObjAnnouncer:OnInitialize()
 								type = "toggle",
 								set = function(info,val) self.db.profile.instancechat = val end,
 								get = function(info) return self.db.profile.instancechat end,
-								order = 7,
+								order = 16,
 								width = "half"
 							},
 							raid = {
@@ -164,7 +170,7 @@ function ObjAnnouncer:OnInitialize()
 								type = "toggle",
 								set = function(info,val) self.db.profile.raidchat = val end,
 								get = function(info) return self.db.profile.raidchat end,
-								order = 8,
+								order = 18,
 								width = "half"
 							},
 							guild = {
@@ -173,7 +179,7 @@ function ObjAnnouncer:OnInitialize()
 								type = "toggle",
 								set = function(info,val) self.db.profile.guildchat = val end,
 								get = function(info) return self.db.profile.guildchat end,
-								order = 9,
+								order = 20,
 								width = "half"
 							},
 							officer = {
@@ -183,7 +189,7 @@ function ObjAnnouncer:OnInitialize()
 								disabled = function() return self.db.profile.guildchat end,
 								set = function(info,val) self.db.profile.officerchat = val end,
 								get = function(info) return self.db.profile.officerchat end,
-								order = 10,
+								order = 22,
 								width = "half",
 							},
 							channel = {
@@ -192,7 +198,7 @@ function ObjAnnouncer:OnInitialize()
 								type = "toggle",
 								set = function(info,val) self.db.profile.channelchat = val end,
 								get = function(info) return self.db.profile.channelchat end,
-								order = 11,
+								order = 24,
 							},
 							channelName = {
 								name = "Select a Channel",
@@ -210,7 +216,7 @@ function ObjAnnouncer:OnInitialize()
 								end,
 								set = function(info,val) self.db.profile.chanName = val end,
 								get = function(info) return self.db.profile.chanName end,
-								order = 12,
+								order = 26,
 							},
 						},
 					},
@@ -220,23 +226,57 @@ function ObjAnnouncer:OnInitialize()
 						type="group",
 						order = 3,
 						args={
-							link = {
-								name = "Quest Link for Objectives",
-								desc = "Adds a clickable link of the relevant quest to your announcements.",
+							qlink = {
+								name = "Quest Link",
+								desc = "Adds a clickable link of the relevant quest to your objective and progress announcements.",
 								type = "toggle",
 								set = function(info,val) self.db.profile.questlink = val end,
 								get = function(info) return self.db.profile.questlink end,
 								order = 1,
-								width = "double",
 							},
-							info = {
-								name = "Additional Information",
-								desc = "Adds more information to your announcements: |n|cFF9ffbff(Quest type, level & if it is a daily)",
+							qtype = {
+								name = "Quest Type",
+								desc = "Adds the quest's type to your announcements.|n|cFF9ffbff(e.g. Dungeon, Raid, PVP, etc.)",
 								type = "toggle",
-								set = function(info,val) self.db.profile.addinfo = val end,
-								get = function(info) return self.db.profile.addinfo end,
+								set = function(info,val) self.db.profile.infoType = val end,
+								get = function(info) return self.db.profile.infoType end,
 								order = 2,
 							},
+							qlevel = {
+								name = "Quest Level",
+								desc = "Adds the intended level of the quest to announcements.",
+								type = "toggle",
+								set = function(info,val) self.db.profile.infoLevel = val end,
+								get = function(info) return self.db.profile.infoLevel end,
+								order = 3,
+							},
+							qdaily = {
+								name = "Is A Daily",
+								desc = "Adds whether it's a daily quest to your announcements.",
+								type = "toggle",
+								set = function(info,val) self.db.profile.infoDaily = val end,
+								get = function(info) return self.db.profile.infoDaily end,
+								order = 4,
+							},
+							qautocomp = {
+								name = "Auto-Complete",
+								desc = "Send an extra announcement when you complete a quest that can be completed remotely.",
+								type = "toggle",
+								set = function(info,val) self.db.profile.infoAutoComp = val 
+									if val then ObjAnnouncer:RegisterEvent("QUEST_AUTOCOMPLETE", oaAutoComplete)
+									else ObjAnnouncer:UnregisterEvent("QUEST_AUTOCOMPLETE", oaAutoComplete) end								
+								end,
+								get = function(info) return self.db.profile.infoAutoComp end,
+								order = 5,								
+							},
+							qfailed = {
+								name = "Quest Failure",
+								desc = "Send an extra announcement when you fail a quest.",
+								type = "toggle",
+								set = function(info,val) self.db.profile.infoFail = val end,
+								get = function(info) return self.db.profile.infoFail end,
+								order = 6,
+							},							
 						},
 					},
 					questGivers = {
@@ -346,6 +386,7 @@ function ObjAnnouncer:OnInitialize()
 					},
 				},
 			},
+			LibSink = ObjAnnouncer:GetSinkAce3OptionsDataTable(),
 		},
 	}
 	
@@ -355,10 +396,23 @@ function ObjAnnouncer:OnInitialize()
 	
 	playerName, realmName = UnitName("player")
 	
+	--[[ LibSharedMedia ]]--
 	LSM:Register("sound", "PVPFlagCapturedHorde","Sound\\Interface\\PVPFlagCapturedHordeMono.wav")
 	LSM:Register("sound", "PVPFlagCaptured", "Sound\\Interface\\PVPFlagCapturedMono.wav")
 	LSM:Register("sound", "GM ChatWarning", "Sound\\Interface\\GM_ChatWarning.ogg")
 	LSM:Register("sound", "PetBattle Defeat01", "Sound\\Interface\\UI_PetBattle_Defeat01.OGG")
+	
+	--[[ LibSink ]]--
+	ObjAnnouncer:SetSinkStorage(self.db.profile)
+	local libsink = myOptions.args.LibSink
+	libsink.name = "Self Outputs"
+	libsink.desc = "Select where to send your self messages."
+	libsink.order = 2
+		--[[ Hide LibSink outputs that would conflict with public announcements ]]--
+	libsink.args.Channel.hidden = true
+	libsink.args.None.hidden = true
+	libsink.args.Default.hidden = true
+	
 end
 
 
@@ -391,30 +445,18 @@ function ObjAnnouncer:OnEnable()
 				local questTitle, level, questTag, suggestedGroup, isHeader, isCollapsed, isComplete, isDaily, questID = GetQuestLogTitle(questIndex)
 				if isHeader ~= 1 then
 			--[[ Announcements Logic ]]-- 
+				--[[ Failed Quests ]]--
+				-- There aren't many quests that can be failed in WoW anymore, so this is kind of hard to test.  This SHOULD work, anyways.  I can test it when I get up to Ring of Blood on my warlock.
+					if isComplete == -1 and self.db.profile.infoFail then
+						questLink = GetQuestLink(questIndex)
+						failedMessage = questLink.." -- Has been failed!"
+						oaMessageHandler(failedMessage, true)
+					end			
 				--[[ Completed Quests Only ]]--
-					if (isComplete) and isComplete ~= questCSaved[questIndex] then
+					if isComplete == 1 and isComplete ~= questCSaved[questIndex] then
 						questCSaved[questIndex] = isComplete
 						if self.db.profile.annType ==  1 then
-							if self.db.profile.addinfo == true then
-								if (isDaily) then
-									InfoDaily = " Daily"
-								else
-									InfoDaily = ""
-								end
-								questLevel = tostring(level)
-								InfoLevel = strjoin("", " [", questLevel, "]")
-								if (questTag) then
-									InfoType = strjoin("", " ", questTag)
-								else
-									InfoType = ""
-								end
-								MessageInfo = strjoin("", "  -- ", InfoType, InfoDaily, InfoLevel)
-							else
-								MessageInfo = ""
-							end
-							questLink = GetQuestLink(questIndex)
-							local compMessage = strjoin("", "QUEST COMPLETE -- ", questLink, MessageInfo)
-							oaMessageHandler(compMessage,true,true,true,true)
+							oaMessageCreator(questIndex, nil, true, level, questTag, isComplete, isDaily)
 						end
 					end
 				--[[ Completed Objectives (and Completed Quests, if Announce Type 3 is selected) ]]--
@@ -422,69 +464,16 @@ function ObjAnnouncer:OnEnable()
 						local objDesc, objType, objComplete = GetQuestLogLeaderBoard(boardIndex, questIndex)
 						if (objComplete) and objComplete ~= objCSaved[questIndex][boardIndex] then
 							objCSaved[questIndex][boardIndex] = objComplete
-							if self.db.profile.annType == 2 or self.db.profile.annType == 3 then
-								if self.db.profile.questlink == true then
-									questLink = GetQuestLink(questIndex)
-									MessageLink = strjoin("", "  --  ", questLink)
-								else
-									MessageLink = ""
-								end
-								if self.db.profile.addinfo == true then
-									if (isDaily) then
-										InfoDaily = " Daily"
-									else
-										InfoDaily = ""
-									end
-									local temp = tostring(level)
-									InfoLevel = strjoin("", " [", temp, "]")
-									if (questTag) then
-										InfoType = strjoin("", " ", questTag)
-									else
-										InfoType = ""
-									end
-									MessageInfo = strjoin("", "  -- ", InfoType, InfoDaily, InfoLevel)
-								else
-									MessageInfo = ""
-								end
-								local objMessage = strjoin("", objDesc, MessageLink,  MessageInfo)								
-								if self.db.profile.annType == 3 and isComplete == 1 then
-									objMessage = strjoin("", objMessage, " -- QUEST COMPLETE!")								
-								end
-								oaMessageHandler(objMessage,true,true,true,isComplete)
+							if self.db.profile.annType == 2 or self.db.profile.annType == 3 then					
+								objCSaved[questIndex][boardIndex] = objComplete
+								oaMessageCreator(questIndex, objDesc, objComplete, level, questTag, isComplete, isDaily)
 							end
 						end
 					--[[ Announces the progress of objectives (and Completed Quests, if Announce Type 5 is selected)]]--
 						if objDesc ~= objDescSaved[questIndex][boardIndex] and string.find(objDesc, ": 0/") == nil then
-							objDescSaved[questIndex][boardIndex] = objDesc
+							objDescSaved[questIndex][boardIndex] = objDesc	
 							if self.db.profile.annType == 4 or self.db.profile.annType == 5 then
-								if self.db.profile.questlink == true then
-									questLink = GetQuestLink(questIndex)
-									MessageLink = strjoin("", "  --  ", questLink)
-								else
-									MessageLink = ""
-								end
-								if self.db.profile.addinfo == true then
-									if (isDaily) then
-										InfoDaily = " Daily"
-									else
-										InfoDaily = ""
-									end
-									local temp = tostring(level)
-									InfoLevel = strjoin("", " [", temp, "]")
-									if (questTag) then
-										InfoType = strjoin("", " ", questTag)
-									else
-										InfoType = ""
-									end
-									MessageInfo = strjoin("", "  -- ", InfoType, InfoDaily, InfoLevel)
-								else
-									MessageInfo = ""
-								end
-								local progMessage = strjoin("", objDesc, MessageLink, MessageInfo)
-								if self.db.profile.annType == 5 and isComplete == 1 then			-- Appends QUEST COMPLETE! if announce type 5 is selected
-									progMessage = strjoin("", progMessage, " -- QUEST COMPLETE!")
-								end								
-								oaMessageHandler(progMessage,true,objComplete,objComplete,isComplete)
+								oaMessageCreator(questIndex, objDesc, objComplete, level, questTag, isComplete, isDaily)
 							end
 						end
 					end
@@ -493,6 +482,56 @@ function ObjAnnouncer:OnEnable()
 		end
 	end
 
+	function oaMessageCreator(questIndex, objDesc, objComplete, level, questTag, isComplete, isDaily)
+	
+		local divider = false
+	
+		if self.db.profile.questlink then 
+			questLink = GetQuestLink(questIndex)
+			messageInfoLink = strjoin("", "  --  ", questLink)
+		else
+			messageInfoLink = ""
+		end
+		if self.db.profile.infoType then
+			if (questTag) then
+				messageInfoType = strjoin("", " ", questTag)
+				divider = true
+			else
+				messageInfoType = ""
+			end
+		else
+			messageInfoType = ""
+		end
+		if isDaily and self.db.profile.infoDaily then
+			messageInfoDaily = " Daily"
+			divider = true
+		else
+			messageInfoDaily = ""
+		end
+		if self.db.profile.infoLevel then
+			local temp = tostring(level)
+			messageInfoLevel = strjoin("", " [", temp, "]")
+			divider = true
+		else
+			messageInfoLevel = ""
+		end
+		if divider then 
+			infoDivider = " --" 
+		else
+			infoDivider = ""
+		end
+		
+		if self.db.profile.annType == 1 then
+			finalAnnouncement = "QUEST COMPLETE -- "..questLink..infoDivider..messageInfoType..messageInfoDaily..messageInfoLevel	-- This announcement type ignores self.db.profile.questlink to ensure that a quest link is always displayed.
+		else
+			finalAnnouncement = objDesc..messageInfoLink..infoDivider..messageInfoType..messageInfoDaily..messageInfoLevel
+			if (self.db.profile.annType == 3 or self.db.profile.annType == 5) and isComplete == 1 then
+				finalAnnouncement = finalAnnouncement.." -- QUEST COMPLETE"
+			end
+		end
+		oaMessageHandler(finalAnnouncement, true, objComplete, objComplete, isComplete)
+	end	
+	
 	function oaMessageHandler(announcement, enableSelf, enableSound, enableComm, isComplete)
 		local selfTest = 0	-- Variable to see if any conditions have fired.
 		if self.db.profile.raidchat == true and IsInRaid() then
@@ -527,15 +566,13 @@ function ObjAnnouncer:OnEnable()
 		end
 	--	if enableSelf then	-- Every announcement message is currently enabled for self reporting, so this test is unnecessary.  It might be useful in the future though, so I'll just comment it out.
 			if self.db.profile.selftellalways then
-				local announcementSelf = string.gsub(announcement, "|r", "|r"..self.db.profile.selfColor.hex)	-- If a yellow quest link is present in the message, this allows the user's self color to display for any text after the yellow quest link.
-				DEFAULT_CHAT_FRAME:AddMessage(self.db.profile.selfColor.hex..announcementSelf)
+				ObjAnnouncer:Pour(announcement, self.db.profile.selfColor.r, self.db.profile.selfColor.g, self.db.profile.selfColor.b)
 			elseif self.db.profile.selftell and selfTest == 0 then
-				local announcementSelf = string.gsub(announcement, "|r", "|r"..self.db.profile.selfColor.hex)
-				DEFAULT_CHAT_FRAME:AddMessage(self.db.profile.selfColor.hex..announcementSelf)
+				ObjAnnouncer:Pour(announcement, self.db.profile.selfColor.r, self.db.profile.selfColor.g, self.db.profile.selfColor.b)
 			end
 	--	end
 		if enableSound and self.db.profile.enableSound then
-			if isComplete then
+			if isComplete == 1 then
 				PlaySoundFile(self.db.profile.compSoundFile,"Master")
 			else
 				PlaySoundFile(self.db.profile.annSoundFile,"Master")
@@ -568,6 +605,15 @@ function ObjAnnouncer:OnEnable()
 		turnLink = GetQuestLink(GetQuestLogIndexByID(qidComplete))
 	end
 	
+	function oaAutoComplete(event, ...)
+		local acID = ...
+		local qIndex = GetQuestLogIndexByID(acID)
+		local qLink = GetQuestLink(qIndex)
+		local message = "AUTO-COMPLETE ALERT -- "..qLink
+		oaMessageHandler(message, true)
+		--ShowQuestComplete(qIndex)	-- Brings up the quest turn-in dialog window.  I added this because auto-completion dialogs don't automatically appear when using Carbonite. Commenting this out for public release.
+	end
+	
 	function oaAcceptEscort(event, ...)
 		if self.db.profile.questEscort then
 			local starter, questTitle = ...
@@ -582,6 +628,7 @@ function ObjAnnouncer:OnEnable()
 	ObjAnnouncer:RegisterEvent("QUEST_ACCEPTED", oaQuestAccepted)
 	if self.db.profile.questTurnin then ObjAnnouncer:RegisterEvent("QUEST_COMPLETE", oaQuestTurnin)	end
 	ObjAnnouncer:RegisterEvent("QUEST_ACCEPT_CONFIRM", oaAcceptEscort)
+	if self.db.profile.infoAutoComp then ObjAnnouncer:RegisterEvent("QUEST_AUTOCOMPLETE", oaAutoComplete) end
 	ObjAnnouncer:RegisterChatCommand("oa", oacommandHandler)
 	ObjAnnouncer:RegisterChatCommand("obja", oacommandHandler)
 	ObjAnnouncer:RegisterComm("Obj Announcer", oareceivedComm)
