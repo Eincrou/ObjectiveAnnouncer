@@ -245,6 +245,7 @@ function ObjAnnouncer:OnInitialize()
 	}	
 	
 	self.db = LibStub("AceDB-3.0"):New("ObjectiveAnnouncerDB", defaults, true)
+	
 	for boardSaved = 1, 100 do
 		objCSaved[boardSaved] = {}
 		objDescSaved[boardSaved] = {}
@@ -738,9 +739,9 @@ function ObjAnnouncer:OnEnable()
 								oaMessageCreator(questIndex, questID, objDesc, objComplete, level, suggestedGroup, isComplete, frequency)
 							end
 						end
-						if isTask and (IsComplete == false) and (not self.db.char.taskStorage[questID][boardIndex]) then
+						if isTask and (not IsComplete) and (not self.db.char.taskStorage[questID][boardIndex]) then
 							self.db.char.taskStorage[questID][boardIndex] = { taskObjDesc = objDesc }
-						elseif isTask and (IsComplete == false) then
+						elseif isTask and (not IsComplete) and (self.db.char.taskStorage[questID][boardIndex].taskObjDesc ~= objDesc) then
 							self.db.char.taskStorage[questID][boardIndex].taskObjDesc = objDesc
 						end						
 					--[[ Announces the progress of objectives (and Completed Quests, if Announce Type 5 is selected)]]--
