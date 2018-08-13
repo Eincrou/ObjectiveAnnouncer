@@ -1,6 +1,6 @@
 ## Interface: 60000
 ## Title: Objective Announcer
-## Version: 6.0.3d
+## Version: 6.0.3e
 ## Notes: Announces Questing Information to Chat
 ## Author: Bantou & Eincrou
 ## SavedVariables: ObjectiveAnnouncerDB
@@ -16,6 +16,8 @@
 #@no-lib-strip@
 Embeds.xml
 #@end-no-lib-strip@
+
+Locales.xml
 
 Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 

@@ -1,18 +1,21 @@
 local NAME, S = ...
 S.VERSION = GetAddOnMetadata(NAME, "Version")
-S.NUMVERSION = 6034	-- 6.0.3c
+S.NUMVERSION = 6035	-- 6.0.3e
 S.NAME = "Objective Announcer v"..S.VERSION
+
 ObjAnnouncer = LibStub("AceAddon-3.0"):NewAddon("Objective Announcer", "AceComm-3.0", "AceEvent-3.0", "AceConsole-3.0", "LibSink-2.0")
+local L = LibStub("AceLocale-3.0"):GetLocale("Objective Announcer")
 	
 	---------------------
 	-- Local Variables --
 	---------------------
-local oorUpdated = true
+local oorUpdated = false
 	
 local self = ObjAnnouncer
 local pairs = pairs
 local tostring = tostring
 local floor = math.floor
+local DAILY, GROUP, WEEKLY, QUEST_COMPLETE = _G.DAILY, _G.GROUP, _G.CALENDAR_REPEAT_WEEKLY, _G.QUEST_WATCH_QUEST_COMPLETE
 
 local playerName, realmName
 local objCSaved = {}
@@ -65,7 +68,7 @@ local defaults = {
 	-------------
 
 StaticPopupDialogs["ObjAnn_OORUPDATED"] = {
-  text = "Objective Announcer's Out-of-range feature has been updated. Please have your group members update to "..S.NAME.." to prevent errors.",
+  text = L["popupoorupdate"],
   button1 = ACCEPT,
   OnAccept = function()
       self.db.global.oorNotifyVersion = S.NUMVERSION
@@ -141,13 +144,13 @@ local function oaMessageCreator(questIndex, questID, objDesc, objComplete, level
 		messageInfoLink = ""
 	end
 	if (suggestedGroup > 0) and self.db.profile.infoSuggGroup then		
-		messageInfoSuggGroup = strjoin("", " [Group: ", suggestedGroup, "]")
+		messageInfoSuggGroup = strjoin("", " ["..GROUP..": ", suggestedGroup, "]")
 		divider = true
 	else
 		messageInfoSuggGroup = ""
 	end
 	if (frequency > 1) and self.db.profile.infoFrequency then
-		if frequency == 2 then messageInfoFrequency = " Daily" elseif frequency == 3 then messageInfoFrequency = " Weekly" end
+		if frequency == 2 then messageInfoFrequency = " "..DAILY elseif frequency == 3 then messageInfoFrequency = " "..WEEKLY end
 		divider = true
 	else
 		messageInfoFrequency = ""
@@ -177,11 +180,11 @@ local function oaMessageCreator(questIndex, questID, objDesc, objComplete, level
 	end
 	
 	if self.db.profile.annType == 1 then
-		finalAnnouncement = "QUEST COMPLETE -- "..questLink..infoDivider..messageInfoSuggGroup..messageInfoFrequency..messageInfoTag..messageInfoLevel	-- This announcement type ignores self.db.profile.questlink to ensure that a quest link is always displayed.
+		finalAnnouncement = string.upper(QUEST_COMPLETE).." -- "..questLink..infoDivider..messageInfoSuggGroup..messageInfoFrequency..messageInfoTag..messageInfoLevel	-- This announcement type ignores self.db.profile.questlink to ensure that a quest link is always displayed.
 	else
 		finalAnnouncement = objDesc..messageInfoLink..infoDivider..messageInfoSuggGroup..messageInfoFrequency..messageInfoLevel
 		if (self.db.profile.annType == 3 or self.db.profile.annType == 5) and isComplete == 1 then
-			finalAnnouncement = finalAnnouncement.." -- QUEST COMPLETE"
+			finalAnnouncement = finalAnnouncement.." -- "..string.upper(QUEST_COMPLETE)
 		end
 	end
 	oaMessageHandler(finalAnnouncement, true, objComplete, objComplete, isComplete)
@@ -194,7 +197,9 @@ local function progressAnnCheck(percent, questID)	-- Check progress bar announce
 		pbThresholds[questID] = interval
 	end
 	if percent >= pbThresholds[questID] then
-		pbThresholds[questID] = (floor(percent / interval) * interval) + interval
+		local threshold = (floor(percent / interval) * interval) + interval
+		if threshold > 100 then threshold = 100 end
+		pbThresholds[questID] = threshold
 		makeAnnounce = true
 	end	
 	return makeAnnounce
@@ -260,7 +265,7 @@ local function oaOORHandler(prefix, text, dist, groupMember)
 				local currentDelta = oorObjCurrent - myObjCurrent		
 				if (currentDelta > oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta) then	-- If current delta increased over previous delta, we missed an objective. If delta decreased, do nothing.
 					local qlink = GetQuestLink(myLogIndex) or self.db.char.taskStorage[oorQuestID].taskQuestLink
-					local announcement = groupMember.."'s Objective Credit Not Received: \""..myObjText.."\" -- "..qlink
+					local announcement = groupMember..L["oornotreceived"]..myObjText.."\" -- "..qlink
 					oaMessageHandler(announcement, true, false, false, false, true)					
 				end	
 				oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta = currentDelta
@@ -304,7 +309,7 @@ local function oaQuestAccepted(event, ...)
 	local questLogIndex = ...
 	if self.db.profile.questAccept then		
 		local acceptedLink = GetQuestLink(questLogIndex)
-		local Message = "Quest Accepted -- "..acceptedLink
+		local Message = L["questaccepted"].." -- "..acceptedLink
 		if self.db.profile.enableAcceptFailSound then PlaySoundFile(self.db.profile.acceptSoundFile,"Master") end
 		oaMessageHandler(Message, true)
 	end
@@ -321,7 +326,7 @@ local function oaAutoComplete(event, ...)
 		local acID = ...
 		local qIndex = GetQuestLogIndexByID(acID)
 		local qLink = GetQuestLink(qIndex)
-		local message = "AUTO-COMPLETE ALERT -- "..qLink
+		local message = L["autocompletealert"].." -- "..qLink
 		oaMessageHandler(message, true)
 		ShowQuestComplete(qIndex)	-- Automatically brings up the quest turn-in dialog window.
 	end
@@ -335,7 +340,7 @@ local function oaAcceptEscort(event, ...)
 		local starterClass = select(2, UnitClass(starter))
 		local classColor = RAID_CLASS_COLORS[starterClass]
 		local colorStarter = "|cff"..string.format("%02X%02X%02X",classColor.r*255, classColor.g*255, classColor.b*255)..starter.."|r"
-		local Message = "Automatically accepted: |cffffef82"..questTitle.."|r -- Started by: "..colorStarter
+		local Message = L["autoaccept1"]..": |cffffef82"..questTitle.."|r -- "..L["autoaccept2"]..": "..colorStarter
 		ObjAnnouncer:Print(Message)
 	end
 end	
@@ -351,8 +356,8 @@ function ObjAnnouncer:OnInitialize()
 		--[[ LibSink ]]--
 	self.myOptions.args.libsink = self:GetSinkAce3OptionsDataTable()
 	local libsink = self.myOptions.args.libsink
-	libsink.name = "Self Outputs"
-	libsink.desc = "Select where to send your ObjAnn messages."
+	libsink.name = L["selfoutput"]
+	libsink.desc = L["selfoutputdesc"]
 	libsink.order = 2
 		--[[ Hide LibSink outputs that would conflict with public announcements ]]--
 	libsink.args.Channel.hidden = true	-- If someone selected a channel here, ObjAnn messages would report to a public channel if all public channels were disabled in OA.  Best to disable this.
@@ -385,14 +390,16 @@ function ObjAnnouncer:OnEnable()
 				end
 			end
 			--[[ Announce Quest Turn-in ]]--
-			if self.db.profile.questTurnin and turnLink ~= nil then
-				local Message = "Quest Turned In -- "..turnLink
+			if self.db.profile.questTurnin and turnLink then
+				local Message = L["questturnin"].." -- "..turnLink
 				oaMessageHandler(Message, true)				
 			end
-			--[[ Announce Quest Experience Gained]]--
-			if self.db.profile.questXP and questExpReceived ~= nil and turnLink ~= nil then
-				local message = questExpReceived.." Experience Gained -- "..turnLink
-				oaMessageHandler(message, true)				
+			--[[ Announce Quest Experience Gained ]]--
+			if self.db.profile.questXP and questExpReceived and turnLink then
+				if questExpReceived > 0 then
+					local message = questExpReceived.." "..L["expgain"].." -- "..turnLink
+					oaMessageHandler(message, true)		
+				end
 			end
 			questExpReceived = nil
 			turnLink = nil
@@ -417,14 +424,14 @@ function ObjAnnouncer:OnEnable()
 							if (not self.db.char.taskStorage[questID]) then
 								self.db.char.taskStorage[questID] = {taskQuestLink = questLink}
 							end											
-							if (IsInGroup() or IsInRaid()) and ((objType == "progressbar") or string.find(objDesc, "slain") or string.find(objDesc, "killed")) then -- Send initial OOR when picking up a new task
+							if (IsInGroup() or IsInRaid()) and ((objType == "progressbar") or string.find(objDesc, L["slain"]) or string.find(objDesc, L["killed"])) then -- Send initial OOR when picking up a new task
 								oaOORSendComm(questIndex, questID, boardIndex, objDesc, isTask, objType)
 							end
 						end						
 					end
 					if isTask and self.db.profile.questTask then
 						local questLink = GetQuestLink(questIndex)
-						local taskMessage = questLink.." -- AREA ENTERED"
+						local taskMessage = questLink.." -- "..L["areaentered"]
 						oaMessageHandler(taskMessage, true, false, false, isComplete)
 					end					
 				end
@@ -439,7 +446,7 @@ function ObjAnnouncer:OnEnable()
 					if isComplete == -1 and self.db.profile.questFail and isComplete ~= questCSaved[questIndex] then
 						questCSaved[questIndex] = isComplete
 						local questLink = GetQuestLink(questIndex)
-						local failedMessage = questLink.." -- QUEST FAILED"
+						local failedMessage = questLink.." -- "..L["questfailed"]
 						oaMessageHandler(failedMessage, true, false, false, isComplete)
 					end
 				--[[ Completed Quests Only ]]--
@@ -484,7 +491,7 @@ function ObjAnnouncer:OnEnable()
 							if percent ~= objDescSaved[questIndex][boardIndex] then
 								if percent > 0 then
 									objDescSaved[questIndex][boardIndex] = percent	
-									if ((progressAnnCheck(percent, questID) or objComplete) and (self.db.profile.annType == 3) or (self.db.profile.annType == 4) or (self.db.profile.annType == 5)) then	-- Run pAC() first to ensure that pbThresholds[qID] stays up to date.
+									if (progressAnnCheck(percent, questID) and self.db.profile.annType == 3) or (self.db.profile.annType == 4) or (self.db.profile.annType == 5) then	-- Run pAC() first to ensure that pbThresholds[qID] stays up to date.
 										local percObjDesc = objDesc..": "..floor(percent).."%"
 										oaMessageCreator(questIndex, questID, percObjDesc, objComplete, level, suggestedGroup, isComplete, frequency)
 									end
