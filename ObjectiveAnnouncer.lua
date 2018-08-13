@@ -1,13 +1,13 @@
 local NAME, S = ...
 S.VERSION = GetAddOnMetadata(NAME, "Version")
-S.NUMVERSION = 6031	-- 6.0.3a
+S.NUMVERSION = 6033	-- 6.0.3c
 S.NAME = "Objective Announcer v"..S.VERSION
 ObjAnnouncer = LibStub("AceAddon-3.0"):NewAddon("Objective Announcer", "AceComm-3.0", "AceEvent-3.0", "AceConsole-3.0", "LibSink-2.0")
 	
 	---------------------
 	-- Local Variables --
 	---------------------
-local oorUpdated = true
+local oorUpdated = false
 	
 local self = ObjAnnouncer
 local pairs = pairs
@@ -233,20 +233,22 @@ local function oaOORHandler(prefix, text, dist, groupMember)
 				myObjCurrent = tonumber(myObjCurrent)
 				myObjTotal = tonumber(myObjTotal)
 			elseif self.db.char.taskStorage[oorQuestID] then
-				if (myObjType == "progressbar") then
-					myObjCurrent = GetQuestProgressBarPercent(oorQuestID)
-					myObjTotal = 100
-					myObjText = myObjDesc
-				else
-					myObjCurrent, myObjTotal, myObjText = string.match(myObjDesc, "(%d+)/(%d+) ?(.*)")
-					myObjCurrent = tonumber(myObjCurrent)
-					myObjTotal = tonumber(myObjTotal)
-				end
-				if myObjCurrent == self.db.char.taskStorage[oorQuestID][oorBoardIndex].taskObjCurrent then	-- Validate queried info against saved data.
-					validTaskInfo = true
-				else
-					myObjCurrent = self.db.char.taskStorage[oorQuestID][oorBoardIndex].taskObjCurrent	-- Load saved objective info.
-					validTaskInfo = true
+				if self.db.char.taskStorage[oorQuestID][oorBoardIndex] then
+					if (myObjType == "progressbar") then
+						myObjCurrent = GetQuestProgressBarPercent(oorQuestID)
+						myObjTotal = 100
+						myObjText = myObjDesc
+					else
+						myObjCurrent, myObjTotal, myObjText = string.match(myObjDesc, "(%d+)/(%d+) ?(.*)")
+						myObjCurrent = tonumber(myObjCurrent)
+						myObjTotal = tonumber(myObjTotal)
+					end
+					if myObjCurrent == self.db.char.taskStorage[oorQuestID][oorBoardIndex].taskObjCurrent then	-- Validate queried info against saved data.
+						validTaskInfo = true
+					else
+						myObjCurrent = self.db.char.taskStorage[oorQuestID][oorBoardIndex].taskObjCurrent	-- Load saved objective info.
+						validTaskInfo = true
+					end
 				end
 			end
 			
@@ -256,7 +258,7 @@ local function oaOORHandler(prefix, text, dist, groupMember)
 				end
 				local currentDelta = oorObjCurrent - myObjCurrent		
 				if (currentDelta > oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta) then	-- If current delta increased over previous delta, we missed an objective. If delta decreased, do nothing.
-					local qlink = GetQuestLink(myLogIndex) or self.db.char.taskStorage[questID].taskQuestLink
+					local qlink = GetQuestLink(myLogIndex) or self.db.char.taskStorage[oorQuestID].taskQuestLink
 					local announcement = groupMember.."'s Objective Credit Not Received: \""..myObjText.."\" -- "..qlink
 					oaMessageHandler(announcement, true, false, false, false, true)					
 				end	
@@ -462,12 +464,14 @@ function ObjAnnouncer:OnEnable()
 								storeObjCurrent, storeObjTotal, storeObjText = string.match(objDesc, "(%d+)/(%d+) ?(.*)")
 								storeObjCurrent = tonumber(storeObjCurrent)
 								storeObjTotal = tonumber(storeObjTotal)								
-							end							
-							if (not self.db.char.taskStorage[questID][boardIndex]) then
-								self.db.char.taskStorage[questID][boardIndex] = {taskObjCurrent = storeObjCurrent, taskObjTotal = storeObjTotal, taskObjText = storeObjText}
-							elseif (self.db.char.taskStorage[questID][boardIndex].taskObjCurrent ~= storeObjCurrent) then
-								self.db.char.taskStorage[questID][boardIndex].taskObjCurrent = storeObjCurrent
-							end							
+							end	
+							if self.db.char.taskStorage[questID] then
+								if (not self.db.char.taskStorage[questID][boardIndex]) then
+									self.db.char.taskStorage[questID][boardIndex] = {taskObjCurrent = storeObjCurrent, taskObjTotal = storeObjTotal, taskObjText = storeObjText}
+								elseif (self.db.char.taskStorage[questID][boardIndex].taskObjCurrent ~= storeObjCurrent) then
+									self.db.char.taskStorage[questID][boardIndex].taskObjCurrent = storeObjCurrent
+								end		
+							end
 						end
 					--[[ Announces the progress of objectives (and Completed Quests, if Announce Type 5 is selected)]]--
 						if (objType == "progressbar") then
