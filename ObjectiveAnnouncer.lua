@@ -4,12 +4,18 @@ local self = ObjAnnouncer
 local LSM = LibStub("LibSharedMedia-3.0")
 local version = GetAddOnMetadata("ObjectiveAnnouncer","Version") or ""
 
+--[[ Local Variables ]]--
+
+local playerName, realmName
+local objCSaved = {}
+local questCSaved = {}
+local objDescSaved = {}
 local oorGroupStorage = {}
-local oorCompletedQIDs = {}
+--local oorCompletedQIDs = {}
 local qidComplete = 0
 local turnLink = nil
 
-defaults = {
+local defaults = {
 	profile = {
 		--[[ General ]]--
 		annType = 2,
@@ -27,7 +33,7 @@ defaults = {
 		channelchat = false,
 		chanName = 1,
 			-- Additional Info --
-		questlink = true, infoSuggGroup = false, infoLevel = false, infoFrequency = false,
+		questlink = true, infoSuggGroup = false, infoLevel = false, infoFrequency = false, infoTag = false,
 			--Quest Start/End --
 		questAccept = false, questTurnin = false, questEscort = false, infoAutoComp = false, infoFail = false,		
 			-- Sound --
@@ -38,18 +44,14 @@ defaults = {
 		acceptSoundName = "Hearthstone-QuestAccepted", acceptSoundFile = "Interface\\Addons\\ObjectiveAnnouncer\\Sounds\\Hearthstone-QuestingAdventurer_QuestAccepted.ogg",		
 		failSoundName = "Hearthstone-QuestFailed", failSoundFile = "Interface\\Addons\\ObjectiveAnnouncer\\Sounds\\Hearthstone-QuestingAdventurer_QuestFailed.ogg",
 			-- Out of Range Alerts --
-		enableOOR = true,	-- debug
-	}
+		enableOOR = false,
+	},
+	char = {
+	taskStorage = {},
+	},
 }
 
-
-function ObjAnnouncer:OnInitialize()
-
-	objCSaved = {}
-	questCSaved = {}
-	objDescSaved = {}
-
-	helpText = [[Usage:
+local helpText = [[Usage:
    |cff55ffff/oa or /obja|r Open options interface
    |cff55ff55/oa quest|r Quests Only
    |cff55ff55/oa obj|r Objectives Only
@@ -66,6 +68,12 @@ function ObjAnnouncer:OnInitialize()
    |cff55ff55/oa soundcomp|r Toggle Completion Sounds
    |cff55ff55/oa soundaf|r Toggle Accept/Fail Sounds   
    |cff55ff55/oa soundcomm|r Toggle Communication Sounds]]
+
+function ObjAnnouncer:OnInitialize()
+
+
+
+
 	
 	slashCommands = {
 		["quest"] = function(v)
@@ -409,7 +417,7 @@ function ObjAnnouncer:OnInitialize()
 						args={
 							qlink = {
 								name = "Enable OOR Alerts",
-								desc = "Send announcements if you do not receive credit when party members using Objective Announcer advance kill quests.|n|cFF9ffbffRequires party members to have Objective Announcer v6.0.3+.",
+								desc = "Send announcements if you do not receive credit when party members using Objective Announcer advance kill quests.|n|cFF9ffbffRequires party members to have Objective Announcer v6.0.3a+.",
 								type = "toggle",
 								set = function(info,val) self.db.profile.enableOOR = val end,
 								get = function(info) return self.db.profile.enableOOR end,
@@ -439,12 +447,12 @@ function ObjAnnouncer:OnInitialize()
 								get = function(info) return self.db.profile.infoSuggGroup end,
 								order = 2,
 							},
-							qlevel = {
-								name = "Quest Level",
-								desc = "Adds the intended level of the quest to announcements.",
+							qtag = {
+								name = "Quest Tag",
+								desc = "Adds special tagging of quest to announcements.|n|cFF9ffbffGroup, Raid, Account, etc.",
 								type = "toggle",
-								set = function(info,val) self.db.profile.infoLevel = val end,
-								get = function(info) return self.db.profile.infoLevel end,
+								set = function(info,val) self.db.profile.infoTag = val end,
+								get = function(info) return self.db.profile.infoTag end,
 								order = 3,
 							},
 							qfreq = {
@@ -454,7 +462,16 @@ function ObjAnnouncer:OnInitialize()
 								set = function(info,val) self.db.profile.infoFrequency = val end,
 								get = function(info) return self.db.profile.infoFrequency end,
 								order = 4,
-							},						
+							},									
+							qlevel = {
+								name = "Quest Level",
+								desc = "Adds the intended level of the quest to announcements.",
+								type = "toggle",
+								set = function(info,val) self.db.profile.infoLevel = val end,
+								get = function(info) return self.db.profile.infoLevel end,
+								order = 5,
+							},
+				
 						},
 					},
 					questStartEnd = {
@@ -655,13 +672,14 @@ function ObjAnnouncer:OnEnable()
 		local logIndex = GetQuestLogIndexByID(qidComplete)
 		if  logIndex == 0 then -- Checks to see if the quest that fired the QUEST_COMPLETE event is no longer in the quest log.
 			local qIDstring = tostring(qidComplete)
-			table.insert(oorCompletedQIDs,qIDstring)			
+		--	table.insert(oorCompletedQIDs,qIDstring)			
 			--[[ Clear oorGroupStorage of unneeded data. ]]--
 			for groupMemb = 1, #oorGroupStorage do				
 				if oorGroupStorage[groupMemb][qIDstring] then
 					table.remove(oorGroupStorage[groupMemb][qIDstring])
 				end
 			end
+			--[[ Announce Quest Turn-in ]]--
 			if self.db.profile.questTurnin and turnLink ~= nil then
 				local Message = "Quest Turned In -- "..turnLink
 				oaMessageHandler(Message, true)
@@ -685,8 +703,11 @@ function ObjAnnouncer:OnEnable()
 			flagQuestTurnin = false
 		else
 			for questIndex = 1, numEntries do
-				local questTitle, level, suggestedGroup, isHeader, isCollapsed, isComplete, frequency, questID = GetQuestLogTitle(questIndex)
+				local questTitle, level, suggestedGroup, isHeader, isCollapsed, isComplete, frequency, questID, startEvent, displayQuestID, isOnMap, hasLocalPOI, isTask, isStory = GetQuestLogTitle(questIndex)
 				if isHeader ~= 1 then
+					if isTask and (not self.db.char.taskStorage[questID]) then
+						self.db.char.taskStorage[questID] = {}
+					end
 			--[[ Announcements Logic ]]-- 
 				--[[ Failed Quests ]]--
 					if isComplete == -1 and self.db.profile.infoFail and isComplete ~= questCSaved[questIndex] then
@@ -696,10 +717,16 @@ function ObjAnnouncer:OnEnable()
 						oaMessageHandler(failedMessage, true, false, false, isComplete)
 					end
 				--[[ Completed Quests Only ]]--
-					if isComplete == 1 and isComplete ~= questCSaved[questIndex] then
-						questCSaved[questIndex] = isComplete
-						if self.db.profile.annType ==  1 then
-							oaMessageCreator(questIndex, nil, true, level, suggestedGroup, isComplete, frequency)
+					if isComplete == 1 then
+						--[[ Prune database character task storage of unneeded data.]]--
+						if isTask and self.db.char.taskStorage[questID] then
+							table.remove(self.db.char.taskStorage[questID])
+						end					
+						if isComplete ~= questCSaved[questIndex] then
+							questCSaved[questIndex] = isComplete
+							if self.db.profile.annType ==  1 then
+								oaMessageCreator(questIndex, questID, nil, true, level, suggestedGroup, isComplete, frequency)
+							end
 						end
 					end
 				--[[ Completed Objectives (and Completed Quests, if Announce Type 3 is selected) ]]--
@@ -708,25 +735,28 @@ function ObjAnnouncer:OnEnable()
 						if (objComplete) and objComplete ~= objCSaved[questIndex][boardIndex] then
 							objCSaved[questIndex][boardIndex] = objComplete
 							if self.db.profile.annType == 2 or self.db.profile.annType == 3 then					
-								oaMessageCreator(questIndex, objDesc, objComplete, level, suggestedGroup, isComplete, frequency)
+								oaMessageCreator(questIndex, questID, objDesc, objComplete, level, suggestedGroup, isComplete, frequency)
 							end
 						end
+						if isTask and (IsComplete == false) and (not self.db.char.taskStorage[questID][boardIndex]) then
+							self.db.char.taskStorage[questID][boardIndex] = { taskObjDesc = objDesc }
+						elseif isTask and (IsComplete == false) then
+							self.db.char.taskStorage[questID][boardIndex].taskObjDesc = objDesc
+						end						
 					--[[ Announces the progress of objectives (and Completed Quests, if Announce Type 5 is selected)]]--
 						if objDesc ~= objDescSaved[questIndex][boardIndex] then
 							if not string.find(objDesc, ": 0/") then
 								objDescSaved[questIndex][boardIndex] = objDesc	
 								if self.db.profile.annType == 4 or self.db.profile.annType == 5 then
-									oaMessageCreator(questIndex, objDesc, objComplete, level, suggestedGroup, isComplete, frequency)
+									oaMessageCreator(questIndex, questID, objDesc, objComplete, level, suggestedGroup, isComplete, frequency)
 								end
 							end
 						--[[  Send progress to other OA users for OOR Alerts. ]]--
-							if (IsInGroup() or IsInRaid()) and (string.find(objDesc, "killed") or string.find(objDesc, "slain")) then	-- debug
+							if (IsInGroup() or IsInRaid()) and (string.find(objDesc, "killed") or string.find(objDesc, "slain")) then
 								local chanType = "RAID"	-- "RAID" sends messages to party if not in raid, but check to be sure.									
-								if IsInGroup() then chanType = "PARTY" end
+								if IsInGroup() and not IsInRaid() then chanType = "PARTY" end
 							--	chanType = "GUILD"	-- Debug
-								local objComp = "false"
-								if objComplete then objComp = "true" end
-								oorCommMessage = strjoin("\a", questID, objDesc, objComp, boardIndex)								
+								oorCommMessage = strjoin("\a", questID, objDesc, boardIndex, tostring(isTask))
 								ObjAnnouncer:SendCommMessage("ObjA OOR", oorCommMessage, chanType)
 							end
 						end
@@ -748,24 +778,18 @@ function ObjAnnouncer:OnEnable()
 	DEFAULT_CHAT_FRAME:AddMessage("|cffcc33ffObjective Announcer".." "..version.." Loaded.  Type|r /oa help |cffcc33fffor list of commands.|r")	
 end
 	
-function oaMessageCreator(questIndex, objDesc, objComplete, level, suggestedGroup, isComplete, frequency)
+function oaMessageCreator(questIndex, questID, objDesc, objComplete, level, suggestedGroup, isComplete, frequency)
 
 	local divider = false
-
-	if self.db.profile.questlink then 
-		questLink = GetQuestLink(questIndex)
+	local questLink = GetQuestLink(questIndex)
+	if self.db.profile.questlink then
 		messageInfoLink = strjoin("", "  --  ", questLink)
 	else
 		messageInfoLink = ""
 	end
-	if self.db.profile.infoSuggGroup then
-		if (suggestedGroup > 0) then
-			local temp = tostring(suggestedGroup)
-			messageInfoSuggGroup = strjoin("", " [Group: ", temp, "]")
-			divider = true
-		else
-			messageInfoSuggGroup = ""
-		end
+	if (suggestedGroup > 0) and self.db.profile.infoSuggGroup then		
+		messageInfoSuggGroup = strjoin("", " [Group: ", suggestedGroup, "]")
+		divider = true
 	else
 		messageInfoSuggGroup = ""
 	end
@@ -774,6 +798,17 @@ function oaMessageCreator(questIndex, objDesc, objComplete, level, suggestedGrou
 		divider = true
 	else
 		messageInfoFrequency = ""
+	end
+	if self.db.profile.infoTag then
+		local tagID, tagName = GetQuestTagInfo(questID)
+		if tagID then 
+			messageInfoTag = " "..tagName 
+			divider = true
+		else
+			messageInfoTag = ""	
+		end		
+	else
+		messageInfoTag = ""			
 	end
 	if self.db.profile.infoLevel then
 		local temp = tostring(level)
@@ -789,7 +824,7 @@ function oaMessageCreator(questIndex, objDesc, objComplete, level, suggestedGrou
 	end
 	
 	if self.db.profile.annType == 1 then
-		finalAnnouncement = "QUEST COMPLETE -- "..questLink..infoDivider..messageInfoSuggGroup..messageInfoFrequency..messageInfoLevel	-- This announcement type ignores self.db.profile.questlink to ensure that a quest link is always displayed.
+		finalAnnouncement = "QUEST COMPLETE -- "..questLink..infoDivider..messageInfoSuggGroup..messageInfoFrequency..messageInfoTag..messageInfoLevel	-- This announcement type ignores self.db.profile.questlink to ensure that a quest link is always displayed.
 	else
 		finalAnnouncement = objDesc..messageInfoLink..infoDivider..messageInfoSuggGroup..messageInfoFrequency..messageInfoLevel
 		if (self.db.profile.annType == 3 or self.db.profile.annType == 5) and isComplete == 1 then
@@ -872,9 +907,9 @@ function oareceivedComm(prefix, commIn, dist, sender)
 end
 
 function oaOORHandler(prefix, text, dist, groupMember)
-	if groupMember =~ playerName then	-- debug
-		local oorQuestID, oorObjDesc, oorObjComplete, oorBoardIndex = strsplit("\a", text, 4)
-		if not oorCompletedQIDs[oorQuestID] then	-- Don't execute for quests that we have completed and turned in this session. (Is this even necessary?)
+	if groupMember ~= playerName then
+		local oorQuestID, oorObjDesc, oorBoardIndex, isTask = strsplit("\a", text, 4)
+	--	if not oorCompletedQIDs[oorQuestID] then	-- Don't execute for quests that we have completed and turned in this session. (Is this even necessary?)
 			if not oorGroupStorage[groupMember] then
 				oorGroupStorage[groupMember] = {}
 			end
@@ -883,31 +918,39 @@ function oaOORHandler(prefix, text, dist, groupMember)
 			end
 			local _, _, oorObjCurrent, oorObjTotal, oorObjText = string.find(oorObjDesc, "(%d+)/(%d+) ?(.*)")
 			local myLogIndex = GetQuestLogIndexByID(oorQuestID)	
-			if enableOOR and myLogIndex > 0 then	-- Is quest in our log?	
-				local myObjDesc, myObjType, myObjComplete = GetQuestLogLeaderBoard(oorBoardIndex, myLogIndex)			
-				if not myObjComplete then	-- Don't execute if we're already done with the objective
+			if self.db.profile.enableOOR and (myLogIndex > 0 or isTask == "true") then	-- Is quest in our log? Also handles tasks that the player has encountered.
+				local myObjDesc, myObjType, myObjComplete = GetQuestObjectiveInfo(oorQuestID, oorBoardIndex)
+				if ((myObjComplete == false) and (isTask == "false")) or ((myObjComplete == false) and (isTask == "true") and (myObjDesc == self.db.char.taskStorage[oorQuestID][oorBoardIndex].taskObjDesc)) then	-- Don't execute if we're already done with the objective. Also ensure that the return from GQOI() is valid.
 					local _, _, myObjCurrent, myObjTotal, myObjText = string.find(myObjDesc, "(%d+)/(%d+) ?(.*)")
 					if not oorGroupStorage[groupMember][oorQuestID][oorBoardIndex] then
-						oorGroupStorage[groupMember][oorQuestID][oorBoardIndex] = {mySavedCurrent = myObjCurrent, savedDelta = oorObjCurrent - myObjCurrent}
-					end				
+						oorGroupStorage[groupMember][oorQuestID][oorBoardIndex] = {savedDelta = oorObjCurrent - myObjCurrent}
+					end
 					local currentDelta = oorObjCurrent - myObjCurrent		
-					if currentDelta > oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta then	-- If current delta increased over previous delta, we missed an objective. If delta decreased, do nothing.
+					if tonumber(currentDelta) > tonumber(oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta) then	-- If current delta increased over previous delta, we missed an objective. If delta decreased, do nothing. Using tonumber() because of a strange "comparing number to string" error that sometimes happens.
 						local qlink = GetQuestLink(myLogIndex)
 						local announcement = groupMember.."'s Objective Credit Not Received: \""..myObjText.."\" -- "..qlink
 						oaMessageHandler(announcement, true, false, false, false, true)					
 					end	
-					oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].mySavedCurrent = myObjCurrent
 					oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta = currentDelta
+				elseif (not myObjComplete) then	-- Handles tasks the player has not encountered this session. GetQuestObjectiveInfo() for tasks not encountered this login session always returns incorrect values.
+					if not oorGroupStorage[groupMember][oorQuestID][oorBoardIndex] then	
+						oorGroupStorage[groupMember][oorQuestID][oorBoardIndex] = {savedDelta = oorObjCurrent}
+					elseif self.db.char.taskStorage[oorQuestID][oorBoardIndex].taskObjDesc then	-- If task objective was ever advanced, calculate delta based on our saved data.
+						local _, _, myTaskCurrent, myTaskTotal, myTaskText = string.find(self.db.char.taskStorage[oorQuestID][oorBoardIndex].taskObjDesc, "(%d+)/(%d+) ?(.*)")
+						oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta = oorObjCurrent - myTaskCurrent
+					else	-- Otherwise, we've either completed this task previously, or have no progress at all.  Update delta, assuming that our task progress is 0.
+						oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta = oorObjCurrent
+					end					
 				end
-			else	-- Else, we still save the delta so we can use it when needed.
+			else	-- If quest is not in questlog and is not a task, still save the delta so we can use it when needed.
 				if not oorGroupStorage[groupMember][oorQuestID][oorBoardIndex] then
 					oorGroupStorage[groupMember][oorQuestID][oorBoardIndex] = {savedDelta = oorObjCurrent}
 				else
 					oorGroupStorage[groupMember][oorQuestID][oorBoardIndex].savedDelta = oorObjCurrent
 				end
 			end
-		end
-	end	-- Debug
+	--	end
+	end
 end
 
 -- [[ Extra Announcements Functions ]] --
@@ -918,13 +961,11 @@ function oaQuestAccepted(event, ...)
 		local initQID = GetQuestID()
 		for boardIndex = 1, GetNumQuestLeaderBoards(questLogIndex) do
 			local objDesc, objType, objComplete = GetQuestLogLeaderBoard(boardIndex, questLogIndex)		
-			if (IsInGroup() or IsInRaid()) and (string.find(objDesc, "killed") or string.find(objDesc, "slain")) then	-- debug
+			if (IsInGroup() or IsInRaid()) and (string.find(objDesc, "killed") or string.find(objDesc, "slain")) then
 				local chanType = "RAID"	-- "RAID" sends messages to party if not in raid, but check to be sure.									
-				if IsInGroup() then chanType = "PARTY" end
+				if IsInGroup() and not IsInRaid() then chanType = "PARTY" end
 			--	chanType = "GUILD"	-- Debug
-				local objComp = "false"
-				if objComplete then objComp = "true" end
-				oorCommMessage = strjoin("\a", initQID, objDesc, objComp, boardIndex)								
+				oorCommMessage = strjoin("\a", initQID, objDesc, boardIndex)								
 				ObjAnnouncer:SendCommMessage("ObjA OOR", oorCommMessage, chanType)	
 			end
 		end
