@@ -1,9 +1,9 @@
 ## Interface: 50400
 ## Title: Objective Announcer
-## Version: 5.4.2b Beta 1
+## Version: 5.4.2c
 ## Notes: Announces Completed Quest Objectives to Chat
 ## Author: Bantou
 ## SavedVariables: ObjectiveAnnouncerDB
-## X-credits: Updated for Patch 5.4 by Eincrou
+## X-credits: Additional development by Eincrou
 
 ObjectiveAnnouncer.xml

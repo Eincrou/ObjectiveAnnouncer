@@ -44,6 +44,8 @@ defaults = {
 	}
 }
 
+
+
 function ObjAnnouncer:OnInitialize()
 
 	objCSaved = {}
@@ -53,8 +55,164 @@ function ObjAnnouncer:OnInitialize()
 	qidComplete = 0
 	turnLink = nil
 
-
-
+	helpText = [[Usage:
+   |cff55ffff/oa or /obja|r Open options interface
+   |cff55ff55/oa quest|r Quests Only
+   |cff55ff55/oa obj|r Objectives Only
+   |cff55ff55/oa both|r Both Quests & Objectives
+   |cff55ff55/oa prog|r Objectives Progress
+   |cff55ff55/oa progq|r Progress and Completed Quests
+   |cff55ff55/oa self|r Toggle Self Messages
+   |cff55ff55/oa pub |r<|cff55ff55channel|r> Toggle Public Channels
+   |cff55ff55/oa accept|r Toggle "Accept A Quest"
+   |cff55ff55/oa turnin|r Toggle "Turn In A Quest"
+   |cff55ff55/oa escort|r Toggle "Auto-Accept Escort/Event Quests"
+   |cff55ff55/oa fail|r Toggle "Quest Failure"
+   |cff55ff55/oa soundcomp|r Toggle Completion Sounds
+   |cff55ff55/oa soundcomm|r Toggle Communication Sounds]]
+	
+	slashCommands = {
+		["quest"] = function(v)
+			self.db.profile.annType = 1
+			ObjAnnouncer:Print("Now Announcing Completed Quests Only")
+		end,
+		["obj"] = function(v)
+			self.db.profile.annType = 2
+			ObjAnnouncer:Print("Now Announcing Completed Objectives Only")
+		end,
+		["both"] = function(v)
+			self.db.profile.annType = 3
+			ObjAnnouncer:Print("Now Announcing Both Completed Quests & Objectives")
+		end,
+		["prog"] = function(v)
+			self.db.profile.annType = 4
+			ObjAnnouncer:Print("Now Announcing Objective Progress")
+		end,
+		["progq"] = function(v)
+			self.db.profile.annType = 5
+			ObjAnnouncer:Print("Now Announcing Objective Progress & Completed Quests")		
+		end,
+		["self"] = function(v)
+			if self.db.profile.selftell then
+				self.db.profile.selftell = false
+				self.db.profile.selftellalways = false
+				ObjAnnouncer:Print("Self Messages |cFFFF0000Disabled|r (Always Self Announce also disabled)")
+			else
+				self.db.profile.selftell = true
+				ObjAnnouncer:Print("Self Messages |cFF00FF00Enabled|r")
+			end
+		end,
+		["pub"] = function(v)
+			if v == "say" then	-- There's probably a more efficient way to do this, but it works...
+				if self.db.profile.saychat then
+					self.db.profile.saychat = false
+					ObjAnnouncer:Print("Say Chat |cFFFF0000Disabled|r")
+				else
+					self.db.profile.saychat = true
+					ObjAnnouncer:Print("Say Chat |cFF00FF00Enabled|r")
+				end
+			elseif	v == "party" then
+				if self.db.profile.partychat then
+					self.db.profile.partychat = false
+					ObjAnnouncer:Print("|cFFA8A8FFParty Chat|r |cFFFF0000Disabled|r")
+				else
+					self.db.profile.partychat = true
+					ObjAnnouncer:Print("|cFFA8A8FFParty Chat|r |cFF00FF00Enabled|r")
+				end
+			elseif v == "instance" then
+				if self.db.profile.instancechat then
+					self.db.profile.instancechat = false
+					ObjAnnouncer:Print("|cFFFD8100Instance Chat|r |cFFFF0000Disabled|r")
+				else
+					self.db.profile.instancechat = true
+					ObjAnnouncer:Print("|cFFFD8100Instance Chat|r |cFF00FF00Enabled|r")
+				end
+			elseif v == "raid" then
+				if self.db.profile.raidchat then
+					self.db.profile.raidchat = false
+					ObjAnnouncer:Print("|cFFFF7F00Raid Chat|r |cFFFF0000Disabled|r")
+				else
+					self.db.profile.raidchat = true
+					ObjAnnouncer:Print("|cFFFF7F00Raid Chat|r |cFF00FF00Enabled|r")
+				end		
+			elseif v == "guild" then
+				if self.db.profile.guildchat then
+					self.db.profile.guildchat = false
+					ObjAnnouncer:Print("|cFF40ff40Guild Chat|r |cFFFF0000Disabled|r")
+				else
+					self.db.profile.guildchat = true
+					ObjAnnouncer:Print("|cFF40ff40Guild Chat|r |cFF00FF00Enabled|r")
+				end
+			elseif v == "officer" then
+				if self.db.profile.officerchat then
+					self.db.profile.officerchat = false
+					ObjAnnouncer:Print("|cFF40c040Officer Chat|r |cFFFF0000Disabled|r")
+				else
+					self.db.profile.officerchat = true
+					self.db.profile.guildchat = false
+					ObjAnnouncer:Print("|cFF40c040Officer Chat|r |cFF00FF00Enabled|r (|cFF40ff40Guild Chat|r |cFFFFFF0000Disabled|r)")
+				end
+			elseif v == "channel" then
+				if self.db.profile.channelchat then
+					self.db.profile.channelchat = false
+					ObjAnnouncer:Print("|cFFffc0c0Channel Chat|r |cFFFF0000Disabled|r")
+				else
+					self.db.profile.channelchat = true
+					ObjAnnouncer:Print("|cFFffc0c0Channel Chat|r |cFF00FF00Enabled|r")
+				end
+			else
+				ObjAnnouncer:Print("Valid public chat names are: say, party, instance, raid, guild, officer & channel.")
+			end
+		end,
+		["accept"] = function(v)
+			if self.db.profile.questAccept then
+				self.db.profile.questAccept = false
+				ObjAnnouncer:Print("Announce Quest Accepted |cFFFF0000Disabled|r")
+			else
+				self.db.profile.questAccept = true
+				ObjAnnouncer:Print("Announce Quest Accepted |cFF00FF00Enabled|r")
+			end
+		end,		
+		["turnin"] = function(v)
+			if self.db.profile.questTurnin then
+				self.db.profile.questTurnin = false
+				ObjAnnouncer:UnregisterEvent("QUEST_COMPLETE", oaQuestTurnin)
+				ObjAnnouncer:Print("Announce Quest Turn-in |cFFFF0000Disabled|r")
+			else
+				self.db.profile.questTurnin = true
+				ObjAnnouncer:RegisterEvent("QUEST_COMPLETE", oaQuestTurnin)
+				ObjAnnouncer:Print("Announce Quest Turn-in |cFF00FF00Enabled|r")
+			end
+		end,
+		["fail"] = function(v)
+			if self.db.profile.infoFail then
+				self.db.profile.infoFail = false
+				ObjAnnouncer:Print("Announce Failed Quests |cFFFF0000Disabled|r")
+			else
+				self.db.profile.infoFail = true
+				ObjAnnouncer:Print("Announce Failed Quests |cFF00FF00Enabled|r")
+			end
+		end,		
+		["soundcomp"] = function(v)
+			if self.db.profile.enableSound then
+				self.db.profile.enableSound = false
+				ObjAnnouncer:Print("Quest/Objective Complete Sounds |cFFFF0000Disabled|r")
+			else
+				self.db.profile.enableSound = true
+				ObjAnnouncer:Print("Quest/Objective Complete Sounds |cFF00FF00Enabled|r")
+			end
+		end,
+		["soundcomm"] = function(v)
+			if self.db.profile.enableCommSound then
+				self.db.profile.enableCommSound = false
+				ObjAnnouncer:Print("Communication Sounds |cFFFF0000Disabled|r")
+			else
+				self.db.profile.enableCommSound = true
+				ObjAnnouncer:Print("Communication Sounds |cFF00FF00Enabled|r")
+			end
+		end,		
+	}	
+	
 	self.db = LibStub("AceDB-3.0"):New("ObjectiveAnnouncerDB", defaults, true)
 	for boardSaved = 1, 100 do
 		objCSaved[boardSaved] = {}
@@ -72,7 +230,7 @@ function ObjAnnouncer:OnInitialize()
 				order = 1,
 				args={
 					announce = {
-						name = "|TInterface\\Icons\\Ability_Warrior_RallyingCry:18|t Announcement Type:",
+						name = "|TInterface\\Icons\\Ability_Warrior_RallyingCry:18|t Announcement Mode:",
 						desc = "Select which type of announcements are made.|n|cFF9ffbffCompleted Quests:|r Announce only when quests are finished.|n|cFF9ffbffCompleted Objectives:|r Announce only finished objectives.|n|cFF9ffbffBoth Quests & Objectives:|r Announces finished objectives and when the quest is fully complete.|n|cFF9ffbffObjective Progress:|r Announce each time an objective is advanced.|n|cFF9ffbffProgress & Completed Quests:|r Announce each time an objective is advanced and when the quest is fully completed.",
 						type = "select",
 						style = "radio",
@@ -400,7 +558,7 @@ function ObjAnnouncer:OnInitialize()
 	LSM:Register("sound", "PVPFlagCapturedHorde","Sound\\Interface\\PVPFlagCapturedHordeMono.wav")
 	LSM:Register("sound", "PVPFlagCaptured", "Sound\\Interface\\PVPFlagCapturedMono.wav")
 	LSM:Register("sound", "GM ChatWarning", "Sound\\Interface\\GM_ChatWarning.ogg")
-	LSM:Register("sound", "PetBattle Defeat01", "Sound\\Interface\\UI_PetBattle_Defeat01.OGG")
+	LSM:Register("sound", "PetBattle Defeat01", "Sound\\Interface\\UI_PetBattle_Defeat01.OGG")	-- For an NYI feature...
 	
 	--[[ LibSink ]]--
 	ObjAnnouncer:SetSinkStorage(self.db.profile)
@@ -409,9 +567,9 @@ function ObjAnnouncer:OnInitialize()
 	libsink.desc = "Select where to send your self messages."
 	libsink.order = 2
 		--[[ Hide LibSink outputs that would conflict with public announcements ]]--
-	libsink.args.Channel.hidden = true
-	libsink.args.None.hidden = true
-	libsink.args.Default.hidden = true
+	libsink.args.Channel.hidden = true	-- If someone selected a channel here, self messages would report to a public channel if all public channels were disabled in OA.  Best to disable this.
+	libsink.args.None.hidden = true	-- We already have a way to disable self announcements
+	libsink.args.Default.hidden = true	--  Could cause self announcements to announce to public channels...maybe.  In any case, unnecessary.
 	
 end
 
@@ -446,11 +604,11 @@ function ObjAnnouncer:OnEnable()
 				if isHeader ~= 1 then
 			--[[ Announcements Logic ]]-- 
 				--[[ Failed Quests ]]--
-				-- There aren't many quests that can be failed in WoW anymore, so this is kind of hard to test.  This SHOULD work, anyways.  I can test it when I get up to Ring of Blood on my warlock.
-					if isComplete == -1 and self.db.profile.infoFail then
+					if isComplete == -1 and self.db.profile.infoFail and isComplete ~= questCSaved[questIndex] then
+						questCSaved[questIndex] = isComplete
 						questLink = GetQuestLink(questIndex)
 						failedMessage = questLink.." -- Has been failed!"
-						oaMessageHandler(failedMessage, true)
+						oaMessageHandler(failedMessage, true, false, false, isComplete)
 					end			
 				--[[ Completed Quests Only ]]--
 					if isComplete == 1 and isComplete ~= questCSaved[questIndex] then
@@ -465,7 +623,6 @@ function ObjAnnouncer:OnEnable()
 						if (objComplete) and objComplete ~= objCSaved[questIndex][boardIndex] then
 							objCSaved[questIndex][boardIndex] = objComplete
 							if self.db.profile.annType == 2 or self.db.profile.annType == 3 then					
-								objCSaved[questIndex][boardIndex] = objComplete
 								oaMessageCreator(questIndex, objDesc, objComplete, level, questTag, isComplete, isDaily)
 							end
 						end
@@ -533,55 +690,68 @@ function ObjAnnouncer:OnEnable()
 	end	
 	
 	function oaMessageHandler(announcement, enableSelf, enableSound, enableComm, isComplete)
-		local selfTest = 0	-- Variable to see if any conditions have fired.
+		local selfTest = true	-- Variable to see if any conditions have fired.
 		if self.db.profile.raidchat == true and IsInRaid() then
 			SendChatMessage(announcement, "RAID")
 			if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest raid", "RAID") end
-			selfTest = selfTest + 1
+			selfTest = false
 		elseif self.db.profile.instancechat and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
 			SendChatMessage(announcement, "INSTANCE_CHAT")
 			if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest instance", "PARTY") end
-			selfTest = selfTest + 1
+			selfTest = false
 		elseif self.db.profile.partychat and IsInGroup(LE_PARTY_CATEGORY_HOME) then
 			SendChatMessage(announcement, "PARTY")
 			if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest party", "PARTY") end
-			selfTest = selfTest + 1
+			selfTest = false
 		elseif self.db.profile.saychat and UnitIsDeadOrGhost("player") == nil then
 			SendChatMessage(announcement, "SAY")
 			if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest say", "PARTY") end
-			selfTest = selfTest + 1	
+			selfTest = false
 		end
 		if self.db.profile.guildchat and IsInGuild() then
 			SendChatMessage(announcement, "GUILD")
 			if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest guild", "GUILD") end
-			selfTest = selfTest + 1
+			selfTest = false
 		elseif self.db.profile.officerchat and CanViewOfficerNote() then
 			SendChatMessage(announcement, "OFFICER")
 			if enableComm then ObjAnnouncer:SendCommMessage("Obj Announcer", "quest officer", "GUILD") end
-			selfTest = selfTest + 1
+			selfTest = false
 		end
 		if self.db.profile.channelchat then
 			SendChatMessage(announcement, "CHANNEL", nil, self.db.profile.chanName)
-			selfTest = selfTest + 1
+			selfTest = false
 		end
 	--	if enableSelf then	-- Every announcement message is currently enabled for self reporting, so this test is unnecessary.  It might be useful in the future though, so I'll just comment it out.
 			if self.db.profile.selftellalways then
 				ObjAnnouncer:Pour(announcement, self.db.profile.selfColor.r, self.db.profile.selfColor.g, self.db.profile.selfColor.b)
-			elseif self.db.profile.selftell and selfTest == 0 then
+			elseif self.db.profile.selftell and selfTest then
 				ObjAnnouncer:Pour(announcement, self.db.profile.selfColor.r, self.db.profile.selfColor.g, self.db.profile.selfColor.b)
 			end
 	--	end
 		if enableSound and self.db.profile.enableSound then
 			if isComplete == 1 then
 				PlaySoundFile(self.db.profile.compSoundFile,"Master")
+			--elseif isComplete == -1 then	
+				--	PlaySoundFile(self.db.profile.failSoundFile,"Master")
 			else
 				PlaySoundFile(self.db.profile.annSoundFile,"Master")
 			end
 		end
 	end
 	
-	function oacommandHandler(str)
-		InterfaceOptionsFrame_OpenToCategory(optionsGUI)
+	function oacommandHandler(input)
+		local linput = string.lower(input)
+		local k,v = string.match(linput, "([%w%+%-%=]+) ?(.*)")
+		if input == "help" then
+           ObjAnnouncer:Print(helpText)
+		end
+		if slashCommands[k] then	-- If valid...
+			slashCommands[k](v)
+		elseif k then	-- If user typed something invalid, show help.
+           ObjAnnouncer:Print(helpText)		
+		else
+			InterfaceOptionsFrame_OpenToCategory(optionsGUI)
+		end
 	end
 
 	function oareceivedComm(prefix, commIn, dist, sender)
@@ -611,7 +781,7 @@ function ObjAnnouncer:OnEnable()
 		local qLink = GetQuestLink(qIndex)
 		local message = "AUTO-COMPLETE ALERT -- "..qLink
 		oaMessageHandler(message, true)
-		--ShowQuestComplete(qIndex)	-- Brings up the quest turn-in dialog window.  I added this because auto-completion dialogs don't automatically appear when using Carbonite. Commenting this out for public release.
+		ShowQuestComplete(qIndex)	-- Automatically brings up the quest turn-in dialog window.
 	end
 	
 	function oaAcceptEscort(event, ...)
@@ -619,8 +789,11 @@ function ObjAnnouncer:OnEnable()
 			local starter, questTitle = ...
 			ConfirmAcceptQuest()
 			StaticPopup_Hide("QUEST_ACCEPT")
-			local Message = "|cff33ff99Objective Announcer|r: Automatically accepted: |cffffef82"..questTitle.."|r -- Started by: "..starter
-			DEFAULT_CHAT_FRAME:AddMessage(Message)
+			local starterClass = select(2, UnitClass(starter))
+			local classColor = RAID_CLASS_COLORS[starterClass]
+			local colorStarter = "|cff"..string.format("%02X%02X%02X",classColor.r*255, classColor.g*255, classColor.b*255)..starter.."|r"
+			local Message = "Automatically accepted: |cffffef82"..questTitle.."|r -- Started by: "..colorStarter
+			ObjAnnouncer:Print(Message)
 		end
 	end
 	
@@ -632,5 +805,5 @@ function ObjAnnouncer:OnEnable()
 	ObjAnnouncer:RegisterChatCommand("oa", oacommandHandler)
 	ObjAnnouncer:RegisterChatCommand("obja", oacommandHandler)
 	ObjAnnouncer:RegisterComm("Obj Announcer", oareceivedComm)
-	DEFAULT_CHAT_FRAME:AddMessage("|cffcc33ffObjective Announcer".." "..version.." Loaded.  Type /oa for Options.|r")
+	DEFAULT_CHAT_FRAME:AddMessage("|cffcc33ffObjective Announcer".." "..version.." Loaded.  Type|r /oa help |cffcc33fffor list of commands.|r")
 end
