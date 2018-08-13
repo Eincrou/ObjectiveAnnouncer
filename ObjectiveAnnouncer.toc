@@ -1,9 +1,16 @@
-## Interface: 50400
+## Interface: 60000
 ## Title: Objective Announcer
-## Version: 5.4.7
+## Version: 6.0.2
 ## Notes: Announces Completed Quest Objectives to Chat
-## Author: Bantou
+## Author: Bantou & Eincrou
 ## SavedVariables: ObjectiveAnnouncerDB
-## X-credits: Additional development by Eincrou
+## X-credits: Created by Bantou. Additional development by Eincrou.
+## X-Category: Quest
+
+## DefaultState: enabled
+## LoadOnDemand: 0
+
+## LoadManagers: AddonLoader
+## X-LoadOn-Always: delayed
 
 ObjectiveAnnouncer.xml

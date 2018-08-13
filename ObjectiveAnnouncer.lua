@@ -26,21 +26,26 @@ defaults = {
 		infoType = false,
 		infoLevel = false,
 		infoDaily = false,
-		infoAutoComp = false,
-		infoFail = false,
-			--Quest Givers --
+			--Quest Start/End --
 		questAccept = false,
 		questTurnin = false,
 		questEscort = false,
+		infoAutoComp = false,
+		infoFail = false,		
 			-- Sound --
-		enableSound = true,
+		enableCompletionSound = true,
 		enableCommSound = false,
+		enableAcceptFailSound = false,
 		annSoundName = "PVPFlagCapturedHorde",
 		annSoundFile = "Sound\\Interface\\PVPFlagCapturedHordeMono.wav",
 		compSoundName = "PVPFlagCaptured",
 		compSoundFile = "Sound\\Interface\\PVPFlagCapturedMono.wav",
 		commSoundName = "GM ChatWarning",
 		commSoundFile = "Sound\\Interface\\GM_ChatWarning.ogg",
+		acceptSoundName = "Hearthstone-QuestAccepted",
+		acceptSoundFile = "Interface\\Addons\\ObjectiveAnnouncer\\Sounds\\Hearthstone-QuestingAdventurer_QuestAccepted.ogg",		
+		failSoundName = "Hearthstone-QuestFailed",
+		failSoundFile = "Interface\\Addons\\ObjectiveAnnouncer\\Sounds\\Hearthstone-QuestingAdventurer_QuestFailed.ogg",
 	}
 }
 
@@ -69,6 +74,7 @@ function ObjAnnouncer:OnInitialize()
    |cff55ff55/oa escort|r Toggle "Auto-Accept Escort/Event Quests"
    |cff55ff55/oa fail|r Toggle "Quest Failure"
    |cff55ff55/oa soundcomp|r Toggle Completion Sounds
+   |cff55ff55/oa soundaf|r Toggle Accept/Fail Sounds   
    |cff55ff55/oa soundcomm|r Toggle Communication Sounds]]
 	
 	slashCommands = {
@@ -150,7 +156,7 @@ function ObjAnnouncer:OnInitialize()
 				else
 					self.db.profile.officerchat = true
 					self.db.profile.guildchat = false
-					ObjAnnouncer:Print("|cFF40c040Officer Chat|r |cFF00FF00Enabled|r (|cFF40ff40Guild Chat|r |cFFFFFF0000Disabled|r)")
+					ObjAnnouncer:Print("|cFF40c040Officer Chat|r |cFF00FF00Enabled|r (|cFF40ff40Guild Chat|r |cFFFF0000Disabled|r)")
 				end
 			elseif v == "channel" then
 				if self.db.profile.channelchat then
@@ -184,24 +190,42 @@ function ObjAnnouncer:OnInitialize()
 				ObjAnnouncer:Print("Announce Quest Turn-in |cFF00FF00Enabled|r")
 			end
 		end,
-		["fail"] = function(v)
-			if self.db.profile.infoFail then
-				self.db.profile.infoFail = false
+		["escort"] = function(v)
+			if self.db.profile.questEscort then
+				self.db.profile.questEscort = false
 				ObjAnnouncer:Print("Announce Failed Quests |cFFFF0000Disabled|r")
 			else
-				self.db.profile.infoFail = true
+				self.db.profile.questEscort = true
+				ObjAnnouncer:Print("Announce Failed Quests |cFF00FF00Enabled|r")
+			end
+		end,			
+		["fail"] = function(v)
+			if self.db.profile.questEscort then
+				self.db.profile.questEscort = false
+				ObjAnnouncer:Print("Announce Failed Quests |cFFFF0000Disabled|r")
+			else
+				self.db.profile.questEscort = true
 				ObjAnnouncer:Print("Announce Failed Quests |cFF00FF00Enabled|r")
 			end
 		end,		
 		["soundcomp"] = function(v)
-			if self.db.profile.enableSound then
-				self.db.profile.enableSound = false
+			if self.db.profile.enableCompletionSound then
+				self.db.profile.enableCompletionSound = false
 				ObjAnnouncer:Print("Quest/Objective Complete Sounds |cFFFF0000Disabled|r")
 			else
-				self.db.profile.enableSound = true
+				self.db.profile.enableCompletionSound = true
 				ObjAnnouncer:Print("Quest/Objective Complete Sounds |cFF00FF00Enabled|r")
 			end
 		end,
+		["soundaf"] = function(v)
+			if self.db.profile.enableAcceptFailSound then
+				self.db.profile.enableAcceptFailSound = false
+				ObjAnnouncer:Print("Quest Accept/Fail Sounds |cFFFF0000Disabled|r")
+			else
+				self.db.profile.enableAcceptFailSound = true
+				ObjAnnouncer:Print("Quest Accept/Fail Sounds |cFF00FF00Enabled|r")
+			end
+		end,		
 		["soundcomm"] = function(v)
 			if self.db.profile.enableCommSound then
 				self.db.profile.enableCommSound = false
@@ -415,31 +439,12 @@ function ObjAnnouncer:OnInitialize()
 								set = function(info,val) self.db.profile.infoDaily = val end,
 								get = function(info) return self.db.profile.infoDaily end,
 								order = 4,
-							},
-							qautocomp = {
-								name = "Auto-Complete|n|cFF9ffbffAlso causes the remote turn-in dialogue window to appear.",
-								desc = "Send an extra announcement when you complete a quest that can be completed remotely.",
-								type = "toggle",
-								set = function(info,val) self.db.profile.infoAutoComp = val 
-									if val then ObjAnnouncer:RegisterEvent("QUEST_AUTOCOMPLETE", oaAutoComplete)
-									else ObjAnnouncer:UnregisterEvent("QUEST_AUTOCOMPLETE", oaAutoComplete) end								
-								end,
-								get = function(info) return self.db.profile.infoAutoComp end,
-								order = 5,								
-							},
-							qfailed = {
-								name = "Quest Failure",
-								desc = "Send an extra announcement when you fail a quest.",
-								type = "toggle",
-								set = function(info,val) self.db.profile.infoFail = val end,
-								get = function(info) return self.db.profile.infoFail end,
-								order = 6,
-							},							
+							},						
 						},
 					},
 					questGivers = {
 						inline = true,
-						name = "|TInterface\\Icons\\Achievement_quests_completed_08:18|t Quest Givers:",
+						name = "|TInterface\\Icons\\Achievement_quests_completed_08:18|t Quest Start/End:",
 						type="group",
 						order = 4,
 						args={
@@ -453,7 +458,7 @@ function ObjAnnouncer:OnInitialize()
 								width = "normal",
 							},
 							turnIn = {
-								name = "Turn In a Quest",
+								name = "Turn in a Quest",
 								desc = "Make an announcement when you turn in a quest.",
 								type = "toggle",
 								set = function(info,val) self.db.profile.questTurnin = val 
@@ -463,14 +468,33 @@ function ObjAnnouncer:OnInitialize()
 								get = function(info) return self.db.profile.questTurnin end,
 								order = 2,
 							},
+							qfailed = {
+								name = "Fail a Quest",
+								desc = "Make an announcement when you fail a quest.",
+								type = "toggle",
+								set = function(info,val) self.db.profile.infoFail = val end,
+								get = function(info) return self.db.profile.infoFail end,
+								order = 3,
+							},										
 							escort = {
 								name = "Auto-accept escort/event quests",
 								desc = "Automatically accepts event quests started by party members.",
 								type = "toggle",
 								set = function(info,val) self.db.profile.questEscort = val end,
 								get = function(info) return self.db.profile.questEscort end,
-								order = 3,
+								order = 4,
 								width = "double",
+							},
+							qautocomp = {
+								name = "Auto-Complete",
+								desc = "Send an extra announcement when you complete a quest that can be completed remotely.|n|cFF9ffbffAlso causes the remote turn-in dialogue window to appear.",
+								type = "toggle",
+								set = function(info,val) self.db.profile.infoAutoComp = val 
+									if val then ObjAnnouncer:RegisterEvent("QUEST_AUTOCOMPLETE", oaAutoComplete)
+									else ObjAnnouncer:UnregisterEvent("QUEST_AUTOCOMPLETE", oaAutoComplete) end								
+								end,
+								get = function(info) return self.db.profile.infoAutoComp end,
+								order = 5,								
 							},
 						},
 					},					
@@ -480,12 +504,12 @@ function ObjAnnouncer:OnInitialize()
 						type="group",
 						order = 5,
 						args={
-							sound = {
+							soundCompletion = {
 								name = "Completion Sounds",
 								desc = "Sets whether to play sounds when announcements are made.",
 								type = "toggle",
-								set = function(info,val) self.db.profile.enableSound = val end,
-								get = function(info) return self.db.profile.enableSound end,
+								set = function(info,val) self.db.profile.enableCompletionSound = val end,
+								get = function(info) return self.db.profile.enableCompletionSound end,
 								order = 1,
 							},
 							soundFileObj = {
@@ -515,20 +539,55 @@ function ObjAnnouncer:OnInitialize()
 									
 								end,
 							},
+							soundAcceptFail = {
+								name = "Accept/Fail Sounds",
+								desc = "Sets whether to play sounds when accepting or failing a quest",
+								type = "toggle",
+								set = function(info,val) self.db.profile.enableAcceptFailSound = val end,
+								get = function(info) return self.db.profile.enableAcceptFailSound end,
+								order = 4,
+							},
+							soundFileAccept = {
+								type = 'select',
+								dialogControl = 'LSM30_Sound',
+								values = AceGUIWidgetLSMlists.sound,
+								order = 5,
+								name = "Objective Accept",
+								desc = "Select a sound to play when you accept a new quest",
+								get = function() return self.db.profile.acceptSoundName end,
+								set = function(info, value)
+									self.db.profile.acceptSoundName = value
+									self.db.profile.acceptSoundFile = LSM:Fetch("sound", self.db.profile.acceptSoundName)									
+								end,
+							},
+							soundFileFail = {
+								type = 'select',
+								dialogControl = 'LSM30_Sound',
+								values = AceGUIWidgetLSMlists.sound,
+								order = 6,
+								name = "Quest Fail",
+								desc = "Select a sound to play when you fail a quest",
+								get = function() return self.db.profile.failSoundName end,
+								set = function(info, value)
+									self.db.profile.failSoundName = value
+									self.db.profile.failSoundFile = LSM:Fetch("sound", self.db.profile.failSoundName)
+									
+								end,
+							},							
 							soundComm = {
 								name = "OA Communication Sounds",
 								desc = "Sets whether to play a sound when other players with Objective Announcer send announcements",
 								type = "toggle",
 								set = function(info,val) self.db.profile.enableCommSound = val end,
 								get = function(info) return self.db.profile.enableCommSound end,
-								order = 4,
+								order = 7,
 								width = "double",
 							},	
 							soundFileComm = {
 								type = 'select',
 								dialogControl = 'LSM30_Sound',
 								values = AceGUIWidgetLSMlists.sound,
-								order = 5,
+								order = 8,
 								name = "OA Communication",
 								desc = "Select a sound to play when another player announces an objective",
 								get = function() 
@@ -559,6 +618,8 @@ function ObjAnnouncer:OnInitialize()
 	LSM:Register("sound", "PVPFlagCaptured", "Sound\\Interface\\PVPFlagCapturedMono.wav")
 	LSM:Register("sound", "GM ChatWarning", "Sound\\Interface\\GM_ChatWarning.ogg")
 	LSM:Register("sound", "PetBattle Defeat01", "Sound\\Interface\\UI_PetBattle_Defeat01.OGG")	-- For an NYI feature...
+	LSM:Register("sound", "Hearthstone-QuestAccepted", "Interface\\Addons\\ObjectiveAnnouncer\\Sounds\\Hearthstone-QuestingAdventurer_QuestAccepted.ogg")
+	LSM:Register("sound", "Hearthstone-QuestFailed", "Interface\\Addons\\ObjectiveAnnouncer\\Sounds\\Hearthstone-QuestingAdventurer_QuestFailed.ogg")
 	
 	--[[ LibSink ]]--
 	ObjAnnouncer:SetSinkStorage(self.db.profile)
@@ -728,11 +789,11 @@ function ObjAnnouncer:OnEnable()
 				ObjAnnouncer:Pour(announcement, self.db.profile.selfColor.r, self.db.profile.selfColor.g, self.db.profile.selfColor.b)
 			end
 	--	end
-		if enableSound and self.db.profile.enableSound then
+		if enableSound and self.db.profile.enableCompletionSound then
 			if isComplete == 1 then
 				PlaySoundFile(self.db.profile.compSoundFile,"Master")
-			--elseif isComplete == -1 then	
-				--	PlaySoundFile(self.db.profile.failSoundFile,"Master")
+			elseif isComplete == -1 and self.db.profile.enableAcceptFailSound then	
+					PlaySoundFile(self.db.profile.failSoundFile,"Master")
 			else
 				PlaySoundFile(self.db.profile.annSoundFile,"Master")
 			end
@@ -742,9 +803,6 @@ function ObjAnnouncer:OnEnable()
 	function oacommandHandler(input)
 		local linput = string.lower(input)
 		local k,v = string.match(linput, "([%w%+%-%=]+) ?(.*)")
-		if input == "help" then
-           ObjAnnouncer:Print(helpText)
-		end
 		if slashCommands[k] then	-- If valid...
 			slashCommands[k](v)
 		elseif k then	-- If user typed something invalid, show help.
@@ -766,6 +824,7 @@ function ObjAnnouncer:OnEnable()
 			local questLogIndex = ...
 			local acceptedLink = GetQuestLink(questLogIndex)
 			local Message = "Quest Accepted -- "..acceptedLink
+			if self.db.profile.enableAcceptFailSound then PlaySoundFile(self.db.profile.acceptSoundFile,"Master") end
 			oaMessageHandler(Message, true)
 		end
 	end
