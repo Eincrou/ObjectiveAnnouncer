@@ -1,6 +1,6 @@
 ## Interface: 60000
 ## Title: Objective Announcer
-## Version: 6.0.3a Beta 3
+## Version: 6.0.3a
 ## Notes: Announces Questing Information to Chat
 ## Author: Bantou & Eincrou
 ## SavedVariables: ObjectiveAnnouncerDB
@@ -13,4 +13,12 @@
 ## LoadManagers: AddonLoader
 ## X-LoadOn-Always: delayed
 
-ObjectiveAnnouncer.xml
+#@no-lib-strip@
+Embeds.xml
+#@end-no-lib-strip@
+
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+
+ObjectiveAnnouncer.lua
+Config.lua
+Broker.lua
