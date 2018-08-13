@@ -1,6 +1,6 @@
 local NAME, S = ...
 S.VERSION = GetAddOnMetadata(NAME, "Version")
-S.NUMVERSION = 6036	-- 6.0.3f
+S.NUMVERSION = 6230	-- 6.2.3
 S.NAME = "Objective Announcer v"..S.VERSION
 
 ObjAnnouncer = LibStub("AceAddon-3.0"):NewAddon("Objective Announcer", "AceComm-3.0", "AceEvent-3.0", "AceConsole-3.0", "LibSink-2.0")
@@ -51,8 +51,8 @@ local defaults = {
 		questAccept = false, questTurnin = false, questEscort = false, infoAutoComp = false, questFail = false,	questTask = false, questXP = false, questRewards = false,
 			-- Sound --
 		enableCompletionSound = true, enableCommSound = false, enableAcceptFailSound = false,
-		annSoundName = "PVPFlagCapturedHorde", annSoundFile = "Sound\\Interface\\PVPFlagCapturedHordeMono.wav",
-		compSoundName = "PVPFlagCaptured", compSoundFile = "Sound\\Interface\\PVPFlagCapturedMono.wav",
+		annSoundName = "PVPFlagCapturedHorde", annSoundFile = "Sound\\Interface\\PVPFlagCapturedHordeMono.ogg",
+		compSoundName = "PVPFlagCaptured", compSoundFile = "Sound\\Interface\\PVPFlagCapturedMono.ogg",
 		commSoundName = "GM ChatWarning", commSoundFile = "Sound\\Interface\\GM_ChatWarning.ogg",
 		acceptSoundName = "Hearthstone-QuestAccepted", acceptSoundFile = "Interface\\Addons\\ObjectiveAnnouncer\\Sounds\\Hearthstone-QuestingAdventurer_QuestAccepted.ogg",		
 		failSoundName = "Hearthstone-QuestFailed", failSoundFile = "Interface\\Addons\\ObjectiveAnnouncer\\Sounds\\Hearthstone-QuestingAdventurer_QuestFailed.ogg",
@@ -357,7 +357,6 @@ end
 function ObjAnnouncer:OnInitialize()
 	self.db = LibStub("AceDB-3.0"):New("ObjectiveAnnouncerDB", defaults, true)
 	self.myOptions.args.profile = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)	
-	
 		--[[ LibSink ]]--
 	self.myOptions.args.libsink = self:GetSinkAce3OptionsDataTable()
 	local libsink = self.myOptions.args.libsink
